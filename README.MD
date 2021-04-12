@@ -2,6 +2,12 @@ This project was started on a whim because the first page of google did not show
 (most likely for copyright reasons).
 
 The code quality is ... not great, but it works.
+![The guess-the-song UI](docs/img_guess_song.png "This is the UI to guess a song")
+
+Adding a new song is possible with a really fancy UI (I am surprised myself)
+![The add-a-song UI](docs/img_add_song.png "UI to add a new song with very fancy waveforms")
+
+
 
 ## Setup
 

@@ -1,0 +1,7 @@
+websockets~=8.1
+ffmpeg-python~=0.2.0
+tinydb~=4.4.0
+youtube_dl~=2021.4.7
+random-word~=1.0.7
+pyyaml~=5.4.1
+python-Levenshtein~=0.12.2

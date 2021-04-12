@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="en" class="h-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>IntroGuesser</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6" crossorigin="anonymous">
+
+    <style>
+        main > .container {
+            padding: 60px 15px 0;
+        }
+
+
+        #waveform-container {
+            margin: 24px auto;
+            width: 1000px;
+        }
+
+        #zoomview-container, #overview-container {
+            margin: 0 0 24px 0;
+            line-height: 0;
+            -moz-box-shadow: 3px 3px 20px #919191;
+            -webkit-box-shadow: 3px 3px 20px #919191;
+            box-shadow: 3px 3px 20px #919191;
+        }
+
+        #zoomview-container {
+            height: 200px;
+        }
+
+        #overview-container {
+            height: 85px;
+        }
+
+
+        .sidebar {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 100; /* Behind the navbar */
+            padding: 48px 0 0; /* Height of navbar */
+            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+        }
+
+
+        .bd-placeholder-img {
+            font-size: 1.125rem;
+            text-anchor: middle;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            user-select: none;
+        }
+
+        @media (min-width: 768px) {
+            .bd-placeholder-img-lg {
+                font-size: 3.5rem;
+            }
+        }
+
+    </style>
+
+</head>
+<body class="d-flex flex-column h-100">
+
+<header>
+    <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Intro Quiz</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse"
+                    aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarCollapse">
+                <ul class="navbar-nav me-auto mb-2 mb-md-0">
+                    <li class="nav-item">
+                        <a class="nav-link" id="addStuffButton" href="#"
+                           onclick='$("main").hide();$("#main-setup-1").show()'>Add songs</a>
+                    </li>
+                </ul>
+                <form class="d-flex" style="width: 30em">
+                    <input class="form-control me-3 " readonly type="text" placeholder="Room code"
+                           aria-label="Room code" id="nav_room_code">
+                    <input type="hidden" id="nav_room_code_hidden"/>
+                    <a href="#" class="btn btn-primary" id="nav_room_code_btn">Copy</a>
+                </form>
+            </div>
+        </div>
+    </nav>
+</header>
+
+<div class="container-fluid">
+    <div class="row">
+
+        <nav id="gameSidebar" class="col-md-3 col-lg-2 d-md-block bg-light sidebar" style="display: none!important;">
+            <div class="position-sticky pt-3">
+
+                <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                    <span>Players</span>
+                </h6>
+                <ul class="nav flex-column mb-2" id="gameSidebarPlayers">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            Loading
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+
+        <main class="flex-shrink-0" id="main-loading">
+            <div class="container" style="position: fixed; top: 40%; left: 40%;">
+                <div class="spinner-border  " role="status" style="width: 6rem; height: 6rem;">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </main>
+
+
+        <!-- Begin page content -->
+        <main class="flex-shrink-0" id="main-screen" style="display: none">
+            <div class="container">
+                <h1 class="mt-5">Guess the Intro</h1>
+                <p class="lead">Welcome....
+                    I have no idea what to write here</p>
+                <div class="input-group mb-2">
+                    <label for="user_name" class="col-sm-2 col-form-label">My display name</label>
+                    <div class="col-sm-10">
+                        <input type="text" class="form-control" id="user_name">
+                    </div>
+                </div>
+                <div class="input-group mb-2">
+                    <label for="join_game_words" class="col-sm-2 col-form-label">Invite Code</label>
+                    <div class="col-sm-10">
+                        <input type="text" class="form-control" id="join_game_words"
+                               placeholder="Paste your invite code" autocomplete="off">
+                    </div>
+                </div>
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-primary btn-block click-once" id="join_game_button">Join game
+                    </button>
+                </div>
+                <hr/>
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-secondary btn-block click-once" id="start_new_game_button">
+                        Start new game
+                    </button>
+                </div>
+            </div>
+        </main>
+
+
+        <!-- Begin page content -->
+        <main class="flex-shrink-0 col-md-9 ms-sm-auto col-lg-10 px-md-4" style="display: none"
+              id="game-screen-waiting">
+            <div class="container">
+                <h1 class="mt-5">Guess the Intro</h1>
+                <p class="lead">Welcome.... Please wait for the host to start the game</p>
+                <button type="button" class="btn btn-primary btn-sm show-host" id="gameWaitingStart">
+                    Start the game
+                </button>
+            </div>
+        </main>
+
+        <main class="flex-shrink-0 col-md-9 ms-sm-auto col-lg-10 px-md-4" style="display: none"
+              id="game-screen-playing">
+            <div class="container">
+                <h1 class="mt-5">Guess the song</h1>
+                <p class="lead">What is the song which is currently being played to you?
+                    <button type="button" class="btn btn-primary btn-sm" id="gamePlayButton">
+                        Listen again
+                    </button>
+                </p>
+
+                <div class="mb-3 row">
+                    <label for="gameArtist" class="col-sm-2 col-form-label">Artist</label>
+                    <div class="col-sm-10">
+                        <input type="text" class="form-control" id="gameArtist" autocomplete="off">
+                    </div>
+                </div>
+
+                <div class="mb-3 row">
+                    <label for="gameTitle" class="col-sm-2 col-form-label">Song Title</label>
+                    <div class="col-sm-10">
+                        <input type="text" class="form-control" id="gameTitle" autocomplete="off">
+                    </div>
+                </div>
+
+                <div class="mb-3 row">
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-primary" id="gameGuessButton">
+                            I'm sure about this!
+                        </button>
+                    </div>
+                </div>
+
+                <p class="text">
+                    <small>
+                        You can always change your answer as long as not everyone has cast their vote.
+                    </small>
+                </p>
+
+                <div class="progress mb-3">
+                    <div class="progress-bar bg-info" id="gameProgressBar" role="progressbar"
+                         style="width: 1%; transition: initial"
+                         aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+
+            </div>
+        </main>
+
+        <main class="flex-shrink-0 col-md-9 ms-sm-auto col-lg-10 px-md-4" style="display: none"
+              id="game-screen-results">
+            <div class="container">
+                <h1 class="mt-5">Results</h1>
+
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th scope="col">Player</th>
+                        <th scope="col" id="game-screen-results-title">...</th>
+                        <th scope="col" id="game-screen-results-artist">...</th>
+                    </tr>
+                    </thead>
+                    <tbody id="game-screen-results-tbody">
+
+                    </tbody>
+                </table>
+
+
+                <iframe width="560" height="315"
+                        id="game-screen-results-video"
+                        title="YouTube video player" frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen>
+                </iframe>
+
+                <div class="mb-3 row">
+                    <div class="d-grid gap-2">
+
+                        <div class="btn-group" role="group" aria-label="Basic mixed styles example">
+                            <button type="button" class="btn btn-danger" id="song_report_bad">That intro was cut badly
+                            </button>
+                            <button type="button" class="btn btn-primary show-non-host click-once"
+                                    id="gameResultsRequestButton">
+                                Request to skip this song
+                            </button>
+                            <button type="button" class="btn btn-primary show-host click-once" id="gameResultsButton">
+                                Next
+                            </button>
+                            <button type="button" class="btn btn-success" id="song_report_good">I liked that intro
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="progress mb-3">
+                    <div class="progress-bar bg-info" id="resultsProgressBar" role="progressbar"
+                         style="width: 0%; transition: initial"
+                         aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+
+
+            </div>
+        </main>
+
+        <main class="flex-shrink-0" style="display: none" id="main-setup-1">
+            <div class="container">
+                <h1 class="mt-5">Add a new song</h1>
+                <p class="lead">Just copy the youtube URL and hit next.</p>
+                <div class="input-group mb-2">
+                    <div class="input-group-prepend">
+                        <div class="input-group-text">https://youtube.com?watch?v=</div>
+                    </div>
+                    <input type="text" class="form-control" id="new_song_watch" placeholder="play link"
+                           aria-label="youtube watch parameter">
+                </div>
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-primary btn-block" id="new_song_next">Next</button>
+                </div>
+            </div>
+        </main>
+
+        <main class="flex-shrink-0" style="display: none" id="main-setup-2">
+            <div class="container">
+                <h1 class="mt-5">Select into duration and song data</h1>
+                <p class="lead">We have downloaded the first 20 seconds - please choose the time (in ms) which should be
+                    played as well as the artists name and song title.</p>
+                <p>The video was titled <code id="setupTitleShow">X</code></p>
+                <form>
+                    <div class="mb-3 row">
+                        <label for="setupPlayerArtist" class="col-sm-2 col-form-label">Artist</label>
+                        <div class="col-sm-10">
+                            <input type="text" class="form-control" id="setupPlayerArtist">
+                        </div>
+                    </div>
+
+                    <div class="mb-3 row">
+                        <label for="setupPlayerTitle" class="col-sm-2 col-form-label">Song Title</label>
+                        <div class="col-sm-10">
+                            <input type="text" class="form-control" id="setupPlayerTitle">
+                        </div>
+                    </div>
+
+                    <div class="mb-3 row">
+                        <label for="setupPlayerTags" class="col-sm-2 col-form-label">Song Tags <small>(Comma
+                            separated)</small></label>
+                        <div class="col-sm-10">
+                            <input type="text" class="form-control" id="setupPlayerTags" placeholder="(e.g.) pop, funk">
+                        </div>
+                    </div>
+
+                    <div class="mb-3 row">
+                        <label for="setupPlayerTimeStart" class="col-sm-2 col-form-label">Intro Duration</label>
+                        <div class="col-sm-10">
+                            <div class="row g-3">
+                                <div class="col-auto">
+                                    <div class="input-group">
+                                        <input type="number" value="1000" min="0" max="20000" class="form-control"
+                                               id="setupPlayerTimeStart"
+                                               placeholder="time"
+                                               aria-label="time to play">
+                                        <div class="input-group-append">
+                                            <div class="input-group-text">ms</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-auto">
+                                    <label for="setupPlayerTimeEnd" class="col-sm-2 col-form-label">to </label>
+                                </div>
+                                <div class="col-auto">
+                                    <div class="input-group">
+                                        <input type="number" value="1000" min="0" max="20000" class="form-control"
+                                               id="setupPlayerTimeEnd"
+                                               placeholder="time"
+                                               aria-label="time to play">
+                                        <div class="input-group-append">
+                                            <div class="input-group-text">ms</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-auto">
+                                    <button type="button" class="btn btn-primary mb-3" id="setupPlayerTestButton">
+                                        Play selected intro
+                                    </button>
+
+                                    <div class="btn-group mb-3" role="group">
+                                        <button type="button" class="btn btn-primary" id="setup_play">Play</button>
+                                        <button type="button" class="btn btn-primary" id="setup_pause">Pause</button>
+
+                                    </div>
+
+                                    <div class="btn-group mb-3" role="group">
+                                        <button type="button" class="btn btn-primary" id="setup_minus_2">-2s</button>
+                                        <button type="button" class="btn btn-secondary" disabled>
+                                            Shift by
+                                        </button>
+                                        <button type="button" class="btn btn-primary" id="setup_plus_2">+2s</button>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div> <!--End row-->
+                    <input type="hidden" class="form-control" id="setupId">
+
+                    <div id="peaks-container">
+                        <div id="zoomview-container"></div>
+                        <div id="overview-container"></div>
+                    </div>
+
+                    <hr/>
+
+                    <div class="mb-3 row">
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-success" id="setupAddButton">Add intro to database
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </main>
+
+
+        <main class="flex-shrink-0" style="display: none" id="main-song-list">
+            <div class="container">
+                <h1 class="mt-5">All songs</h1>
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th scope="col">Title</th>
+                        <th scope="col">Artist</th>
+                        <th scope="col">Length</th>
+                        <th scope="col"></th>
+
+                    </tr>
+                    </thead>
+                    <tbody id="song_list_table">
+
+                    </tbody>
+                </table>
+            </div>
+        </main>
+
+    </div>
+</div>
+
+<footer class="footer mt-auto py-3 bg-light" style="z-index: 111">
+    <div class="container">
+        <div class="col-md-3 col-lg-2">
+            <span class="text-muted">Volume:</span>
+            <input type="range" class="form-range" min="0" max="100" id="masterVolume" aria-label="Volume"
+                   title="Volume" value="90">
+        </div>
+    </div>
+</footer>
+
+
+<!-- Modal -->
+<div class="modal" id="progressModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+     aria-labelledby="progressModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="progressModalLabel">Making progress</h5>
+            </div>
+            <div class="modal-body" id="progressModalBody">
+                ...
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal" id="errorModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+     aria-labelledby="errorModalLabel" aria-hidden="true">
+    <div class="modal-dialog bg-danger">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="errorModalLabel">An error occurred</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="errorModalBody">
+                ...
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+        integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+        crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+        crossorigin="anonymous"></script>
+
+
+<script src="peaks.js"></script>
+<script src="peakhelper.js"></script>
+
+<script src="game.js"></script>
+
+</body>
+</html>

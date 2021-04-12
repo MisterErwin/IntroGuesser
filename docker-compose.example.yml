@@ -1,0 +1,40 @@
+version: "3.3"
+
+services:
+  # the python server being the backend
+  intro-ws:
+    build: .
+    volumes:
+      - ./public:/usr/src/app/public
+      - ./db.json:/usr/src/app/db.json
+    environment:
+      - ADMIN_PWD=changeMe
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.intro-back.rule=Host(`introguesserws.example.org`)"
+      - "traefik.http.routers.intro-back.entrypoints=web,websecure"
+      - "traefik.http.routers.intro-back.tls.certresolver=myhttpchallenge"
+      - "traefik.http.middlewares.sslheader.headers.customrequestheaders.X-Forwarded-Proto = https"
+
+    networks:
+      - behind_traefik
+
+  # a static file server because I could not be **** to write it in python
+  static:
+    image: "halverneus/static-file-server"
+    container_name: "static-introguesser-fileserver"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.intro-fs.rule=Host(`introguesser.example.org`)"
+      - "traefik.http.routers.intro-fs.entrypoints=web,websecure"
+      - "traefik.http.routers.intro-fs.tls.certresolver=myhttpchallenge"
+    networks:
+      - behind_traefik
+    volumes:
+      - "./public/:/web:ro"
+
+# with a traefik setup
+
+networks:
+  behind_traefik:
+    external: true

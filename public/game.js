@@ -108,7 +108,7 @@ socket.addEventListener('message', function (event) {
         });
 
         currentGame.autoSaveGuessTimer = window.setInterval(function () {
-            sendGuess(true);
+            sendGuess(false);
         }, 1000);
     } else if (data.action === 'reply_fetch_tags') {
         let tagSelect = $("#newGameSettingsTags");
@@ -485,7 +485,7 @@ $("#gameTitle").keyup(function (event) {
 
 $("#gameGuessButton").on('click', function () {
     has_sent_guess = true;
-    sendGuess();
+    sendGuess(true);
     $(this).removeClass("btn-primary").addClass("btn-success")
 });
 

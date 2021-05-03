@@ -17,6 +17,8 @@ from Levenshtein import distance as levenshtein_distance
 import time
 import sqlite3
 import pylast
+import random
+import math
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -140,6 +142,20 @@ def group_points(dists):
     return points
 
 
+def show_help(orig, percentage):
+    if percentage <= 0:
+        return ''
+    rep = re.sub(r'\S', '_', orig)
+    rep = list(rep)
+    positions = list(filter(lambda p: orig[p] != ' ', range(0, len(rep))))
+    random.shuffle(positions)
+    n = math.floor(len(orig) * min(max(percentage, 0), 100) / 100)
+    for r in positions[:n]:
+        rep[r] = orig[r]
+
+    return ''.join(rep)\
+
+
 async def game_show_result(g):
     sqlite_cur.execute('SELECT * FROM songs WHERE uuid = ?', (g['current_song'],))
     current_question = sqlite_cur.fetchone()
@@ -229,6 +245,7 @@ async def msg(str_msg, websocket):
             'last_seen': None,
             'state': 'WAITING',
             'current_song': None,
+            'help_percentage': int(data['help_percentage']) if 'help_percentage' in data else 0,
             'song_tags': data['song_tags'],
         }
         GAMES[words] = game
@@ -341,6 +358,8 @@ async def msg(str_msg, websocket):
             p.guess = None
         await broadcast_to_game(g, {'action': 'game_next',
                                     'path': f'songs/game/{question_uuid}.mp3',
+                                    'help_artist': show_help(question['artist'], g['help_percentage']),
+                                    'help_title': show_help(question['title'], g['help_percentage']),
                                     'result_yt_id': 'dQw4w9WgXcQ',
                                     'words': g['words']})
     elif data['command'] == 'admin_list_songs':

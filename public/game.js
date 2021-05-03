@@ -90,6 +90,10 @@ socket.addEventListener('message', function (event) {
         document.getElementById('game-screen-results-video').src = '';
         document.getElementById('game-screen-results-image').src = '';
 
+
+        $("#gameArtist").attr('placeholder', data.help_artist);
+        $("#gameTitle").attr('placeholder', data.help_title);
+
         if (resultNode)
             resultNode.stop(0);
         // playNote(261.6, 'sine')
@@ -450,6 +454,7 @@ $("#start_new_game_button").on('click', function () {
         'words': document.getElementById('join_game_words').value,
         'name': document.getElementById('user_name').value,
         'song_tags': $("#newGameSettingsTags").val(),
+        'help_percentage': $("#newGameSettingsHelpPercentage").val(),
     }));
 });
 

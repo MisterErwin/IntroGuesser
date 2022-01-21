@@ -86,6 +86,7 @@
                            aria-label="Room code" id="nav_room_code">
                     <input type="hidden" id="nav_room_code_hidden"/>
                     <a href="#" class="btn btn-primary" id="nav_room_code_btn">Copy</a>
+                    <a href="#" class="btn btn-primary mx-2" id="nav_room_code_qr_btn">QR</a>
                 </form>
             </div>
         </div>
@@ -95,8 +96,8 @@
 <div class="container-fluid">
     <div class="row">
 
-        <nav id="gameSidebar" class="col-md-3 col-lg-2 d-md-block bg-light sidebar" style="display: none!important;">
-            <div class="position-sticky pt-3">
+        <nav id="gameSidebar" class="col-md-3 col-lg-2 d-md-block bg-light sidebar d-none d-lg-block" style="display: none!important;">
+            <div class="position-sticky pt-3 ">
 
                 <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
                     <span>Players</span>
@@ -199,17 +200,17 @@
 
                             <div class="mb-3 row">
                                 <label for="newGameSettingsHelpPercentage" class="col-sm-3 col-form-label">
-                                    % of letters shown (0 for no help)
+                                    % of letters shown (0 for no help - 100 for 4 choices)
                                 </label>
                                 <div class="col-sm-8">
                                     <input type="range" class="form-range" min="0" max="100"
-                                           value="0"
+                                           value="100"
                                            id="newGameSettingsHelpPercentage"
                                            data-range-target="newGameSettingsHelpPercentageSpan"
                                     />
                                 </div>
                                 <div class="col-sm-1">
-                                    <span id="newGameSettingsHelpPercentageSpan">0</span>%
+                                    <span id="newGameSettingsHelpPercentageSpan">100</span>%
                                 </div>
                             </div>
 
@@ -260,25 +261,57 @@
                     </button>
                 </p>
 
-                <div class="mb-3 row">
-                    <label for="gameArtist" class="col-sm-2 col-form-label">Artist</label>
-                    <div class="col-sm-10">
-                        <input type="text" class="form-control" id="gameArtist" autocomplete="off">
+                <div id="gamePlayInput">
+                    <div class="mb-3 row">
+                        <label for="gameArtist" class="col-sm-2 col-form-label">Artist</label>
+                        <div class="col-sm-10">
+                            <input type="text" class="form-control" id="gameArtist" autocomplete="off">
+                        </div>
+                    </div>
+
+                    <div class="mb-3 row">
+                        <label for="gameTitle" class="col-sm-2 col-form-label">Song Title</label>
+                        <div class="col-sm-10">
+                            <input type="text" class="form-control" id="gameTitle" autocomplete="off">
+                        </div>
+                    </div>
+
+                    <div class="mb-3 row">
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-primary" id="gameGuessButton">
+                                I'm sure about this!
+                            </button>
+                        </div>
                     </div>
                 </div>
-
-                <div class="mb-3 row">
-                    <label for="gameTitle" class="col-sm-2 col-form-label">Song Title</label>
-                    <div class="col-sm-10">
-                        <input type="text" class="form-control" id="gameTitle" autocomplete="off">
+                <div id="gamePlayFixedInputs">
+                    <div class="mb-3 row">
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-primary gameGuessButtonFixed" id="gameGuessButtonFixed0">
+                                Choice 1
+                            </button>
+                        </div>
                     </div>
-                </div>
-
-                <div class="mb-3 row">
-                    <div class="d-grid gap-2">
-                        <button type="button" class="btn btn-primary" id="gameGuessButton">
-                            I'm sure about this!
-                        </button>
+                    <div class="mb-3 row">
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-primary gameGuessButtonFixed" id="gameGuessButtonFixed1">
+                                Choice 1
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-primary gameGuessButtonFixed" id="gameGuessButtonFixed2">
+                                Choice 1
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-primary gameGuessButtonFixed" id="gameGuessButtonFixed3">
+                                Choice 1
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -578,6 +611,19 @@
         </div>
     </div>
 </div>
+<div class="modal" id="qrModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+     aria-labelledby="qrModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="qrModalLabel">Scan the QR code</h5>
+            </div>
+            <div class="modal-body" id="qrModalBody">
+                <div class="center" id="qrModalBodyQR"></div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
         integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
@@ -591,6 +637,7 @@
 <script src="peakhelper.js"></script>
 
 <script src="game.js"></script>
+<script src="qrcode.min.js" async></script>
 
 </body>
 </html>

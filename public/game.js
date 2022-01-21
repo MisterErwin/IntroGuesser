@@ -24,6 +24,7 @@ let addSongData;
 let myUUID;
 let currentGame = undefined;
 let resultNode;
+let guessNode;
 let adminSongs;
 // Listen for messages
 socket.addEventListener('message', function (event) {
@@ -90,9 +91,21 @@ socket.addEventListener('message', function (event) {
         document.getElementById('game-screen-results-video').src = '';
         document.getElementById('game-screen-results-image').src = '';
 
-
-        $("#gameArtist").attr('placeholder', data.help_artist);
-        $("#gameTitle").attr('placeholder', data.help_title);
+        if (data.fixed_choices && data.fixed_choices.length > 1) {
+            $("#gamePlayFixedInputs").show();
+            $("#gamePlayInput").hide();
+            for (let i=0;i<4;i++)
+            $("#gameGuessButtonFixed"+i).data('title', data.fixed_choices[i].title)
+                .data('artist', data.fixed_choices[i].artist)
+                .text(data.fixed_choices[i].title + " - " + data.fixed_choices[i].artist)
+                .removeClass("btn-info")
+                .addClass("btn-primary");
+        }else {
+            $("#gamePlayInput").show();
+            $("#gamePlayFixedInputs").hide();
+            $("#gameArtist").attr('placeholder', data.help_artist);
+            $("#gameTitle").attr('placeholder', data.help_title);
+        }
 
         if (resultNode)
             resultNode.stop(0);
@@ -108,7 +121,7 @@ socket.addEventListener('message', function (event) {
         document.getElementById('gameProgressBar').style.width = '0%';
         document.getElementById('gameProgressBar').style.transition = 'initial';
         loadIntoBuffer(currentGame.path, function () {
-            playSound(setupBuffer)
+            guessNode = playSound(setupBuffer)
         });
 
         currentGame.autoSaveGuessTimer = window.setInterval(function () {
@@ -157,6 +170,9 @@ socket.addEventListener('message', function (event) {
                     $("#game-screen-results-video").show();
                     document.getElementById('game-screen-results-video').src = 'https://www.youtube-nocookie.com/embed/' + data.yt_id;
                 }
+
+                if (guessNode)
+                    guessNode.stop(0);
 
                 loadIntoBuffer(data.long_file, function (b) {
                     // Play the long variant and fade to zero in the last few seconds
@@ -212,7 +228,7 @@ socket.addEventListener('message', function (event) {
 
                 if (currentGame.path) {
                     loadIntoBuffer(currentGame.path, function () {
-                        playSound(setupBuffer)
+                        guessNode = playSound(setupBuffer)
                     });
                 }
 
@@ -386,6 +402,9 @@ const errorModal = new bootstrap.Modal(document.getElementById('errorModal'), {
     backdrop: 'static',
     close: 'true',
 })
+const qrModal = new bootstrap.Modal(document.getElementById('qrModal'), {
+    close: 'true',
+})
 
 $("#new_song_next").on('click', function () {
     const vid = document.getElementById('new_song_watch');
@@ -473,7 +492,7 @@ $("#gameResultsRequestButton").on('click', function () {
 $("#gamePlayButton").on('click', function () {
     if (currentGame)
         loadIntoBuffer(currentGame.path, function () {
-            playSound(setupBuffer)
+           guessNode = playSound(setupBuffer)
         });
 });
 
@@ -493,6 +512,15 @@ $("#gameGuessButton").on('click', function () {
     sendGuess(true);
     $(this).removeClass("btn-primary").addClass("btn-success")
 });
+
+$(".gameGuessButtonFixed").on('click', function ()  {
+    $("#gameArtist").val($(this).data("artist"));
+    $("#gameTitle").val($(this).data("title"));
+    has_sent_guess = true;
+    sendGuess(true);
+    $(".gameGuessButtonFixed").removeClass("btn-info").addClass("btn-primary");
+    $(this).removeClass("btn-primary").addClass("btn-info");
+})
 
 let has_sent_guess = false;
 
@@ -518,8 +546,16 @@ $("#nav_room_code_btn").on('click', function () {
     copyText.select();
     document.execCommand("copy");
     copyText.value = room_code;
+});
 
-})
+$("#nav_room_code_qr_btn").on('click', function () {
+    let room_code = document.getElementById('nav_room_code').value;
+    let txt = window.location.protocol + "//" + window.location.host + window.location.pathname + '?r=' + encodeURIComponent(room_code);
+    let elem = document.getElementById('qrModalBodyQR');
+    elem.innerHTML = '';
+    new QRCode(elem, {text: txt, width: 450, height: 450});
+    qrModal.show();
+});
 
 $("tbody").on('click', '[data-admin-play-intro]', function () {
     loadIntoBuffer($(this).attr("data-admin-play-intro"), playSound);

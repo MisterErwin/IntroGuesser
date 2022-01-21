@@ -356,11 +356,26 @@ async def msg(str_msg, websocket):
         g['previous'].append(question['yt_id'])
         for p in websocket.game['players']:
             p.guess = None
+        fixed_choices = []
+        if g['help_percentage'] == 100:
+            fixed_choices.append({'artist': question['artist'], 'title': question['title']})
+            if len(g['song_tags']) == 0:
+                sqlite_cur.execute(f'SELECT songs.* FROM songs WHERE yt_id != ? AND title != ? ORDER BY RANDOM() LIMIT 3', [question['yt_id'], question['title']])
+            else:
+                params = g['song_tags'] + g['previous']
+                tag_str = '?' + ',?' * (len(g['song_tags']) - 1)
+                sqlite_cur.execute(
+                    f'SELECT songs.* FROM songs JOIN song_tags ON song_tags.song_uuid = songs.uuid AND song_tags.tag IN ({tag_str}) WHERE yt_id != ? AND title != ? ORDER BY RANDOM() LIMIT 1',
+                    params + [question['yt_id'], question['title']])
+            for row in sqlite_cur.fetchall():
+                fixed_choices.append({'artist': row['artist'], 'title': row['title']})
+            random.shuffle(fixed_choices)
         await broadcast_to_game(g, {'action': 'game_next',
                                     'path': f'songs/game/{question_uuid}.mp3',
                                     'help_artist': show_help(question['artist'], g['help_percentage']),
                                     'help_title': show_help(question['title'], g['help_percentage']),
                                     'result_yt_id': 'dQw4w9WgXcQ',
+                                    'fixed_choices': fixed_choices,
                                     'words': g['words']})
     elif data['command'] == 'admin_list_songs':
         if data['password'] == os.getenv('ADMIN_PWD'):

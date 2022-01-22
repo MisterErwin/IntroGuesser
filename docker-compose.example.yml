@@ -6,9 +6,11 @@ services:
     build: .
     volumes:
       - ./public:/usr/src/app/public
-      - ./db.json:/usr/src/app/db.json
+      - ./intro.db:/usr/src/app/intro.db
     environment:
       - ADMIN_PWD=changeMe
+      - LAST_API_KEY=REPLACEME
+      - LAST_API_SECRET=REPLACEME
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.intro-back.rule=Host(`introguesserws.example.org`)"

@@ -406,10 +406,20 @@ const qrModal = new bootstrap.Modal(document.getElementById('qrModal'), {
     close: 'true',
 })
 
+$("#new_song_watch").on('paste',  function (e) {
+    console.log(e);
+    let paste = (e.originalEvent.clipboardData || window.clipboardData).getData('text');
+    if (paste.startsWith("https")) {
+        $("#new_song_watch").val(new URLSearchParams(new URL(paste).search).get('v'));
+        e.preventDefault();
+    }
+});
+
 $("#new_song_next").on('click', function () {
     const vid = document.getElementById('new_song_watch');
     socket.send(JSON.stringify({'command': 'init_download', 'id': vid.value}));
 });
+
 $("[data-song-report-button]").on('click', function () {
     $("[data-song-report-button]").attr("disabled", "disabled")
     if (currentGame.song_uuid)

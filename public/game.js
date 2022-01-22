@@ -3,7 +3,7 @@ const socket = new WebSocket(
     (
         (location.hostname === "localhost" || location.hostname === "127.0.0.1") ?
             'ws://localhost:8765' :
-            'wss://introguesserws.k3.luepg.es')
+            'wss://introguesserws.cloud.luepg.es')
     + '/version/1.1'
 );
 
@@ -94,12 +94,13 @@ socket.addEventListener('message', function (event) {
         if (data.fixed_choices && data.fixed_choices.length > 1) {
             $("#gamePlayFixedInputs").show();
             $("#gamePlayInput").hide();
-            for (let i=0;i<4;i++)
-            $("#gameGuessButtonFixed"+i).data('title', data.fixed_choices[i].title)
-                .data('artist', data.fixed_choices[i].artist)
-                .text(data.fixed_choices[i].title + " - " + data.fixed_choices[i].artist)
-                .removeClass("btn-info")
-                .addClass("btn-primary");
+            for (let i=0;i<4;i++) {
+                $("#gameGuessButtonFixed" + i).data('title', data.fixed_choices[i].title)
+                    .data('artist', data.fixed_choices[i].artist)
+                    .text(data.fixed_choices[i].title + " - " + data.fixed_choices[i].artist)
+                    .removeClass("btn-info")
+                    .addClass("btn-primary");
+            }
         }else {
             $("#gamePlayInput").show();
             $("#gamePlayFixedInputs").hide();
@@ -278,16 +279,6 @@ socket.addEventListener('message', function (event) {
                 }).join(', ')) : ' - ';
 
 
-                // document.getElementById("setupPlayerSrc").src = data.file
-                // loadIntoBuffer(data.file, function (audioBuffer) {
-                //     setupPeaks(audioBuffer);
-                // });
-
-                // document.getElementById("setupPlayer").load();
-                // document.getElementById("setupTitleShow").innerText = data.title;
-                // document.getElementById("setupPlayerArtist").value = "";
-                // document.getElementById("setupPlayerTitle").value = "";
-
                 Object.assign(addSongData, data);
                 console.log(addSongData)
                 break;
@@ -464,7 +455,6 @@ $("#setupAddButton").on('click', function () {
         'time_end': document.getElementById("setupPlayerTimeEnd").value,
 
     }
-    console.log(d)
     socket.send(JSON.stringify(d));
 });
 
@@ -477,13 +467,30 @@ $("#join_game_button").on('click', function () {
     }));
 });
 
+$('#new_game_mode_mc').change(function(){
+    if ($(this).is(':checked')) {
+        $('#new_game_keyboard_container').hide();
+        $('#new_game_mc_container').show();
+    }
+});
+$('#new_game_mode_input').change(function(){
+    if ($(this).is(':checked')) {
+        $('#new_game_keyboard_container').show();
+        $('#new_game_mc_container').hide();
+    }
+});
+
 $("#start_new_game_button").on('click', function () {
     socket.send(JSON.stringify({
         'command': 'start_game',
         'words': document.getElementById('join_game_words').value,
         'name': document.getElementById('user_name').value,
         'song_tags': $("#newGameSettingsTags").val(),
+        'input_mode': $("#new_game_mode_mc").is(':checked') ? 'mc' : 'input',
         'help_percentage': $("#newGameSettingsHelpPercentage").val(),
+        'mc_chance_artist': $("#newGameSettingsMCArtistOnlyChance").val(),
+        'mc_chance_title': $("#newGameSettingsMCTitleOnlyChance").val(),
+        'presentation_mode': $('#new_game_presentation_mode_on').is(':checked'),
     }));
 });
 
@@ -549,6 +556,7 @@ function sendGuess(announce) {
     }))
 }
 
+// Copy the current invite link with the URL
 $("#nav_room_code_btn").on('click', function () {
     let room_code = document.getElementById('nav_room_code').value;
     let copyText = document.querySelector("#nav_room_code");
@@ -558,6 +566,7 @@ $("#nav_room_code_btn").on('click', function () {
     copyText.value = room_code;
 });
 
+// Show the current invite URL as a QR code
 $("#nav_room_code_qr_btn").on('click', function () {
     let room_code = document.getElementById('nav_room_code').value;
     let txt = window.location.protocol + "//" + window.location.host + window.location.pathname + '?r=' + encodeURIComponent(room_code);
@@ -567,49 +576,6 @@ $("#nav_room_code_qr_btn").on('click', function () {
     qrModal.show();
 });
 
-$("tbody").on('click', '[data-admin-play-intro]', function () {
-    loadIntoBuffer($(this).attr("data-admin-play-intro"), playSound);
-})
-    .on('click', '[data-admin-query-tag]', function () {
-        let tagVal = $(this).attr("data-admin-query-tag");
-        $("#song_list_table_tags")
-            .append($("<span/>", {
-                class: 'badge bg-primary mx1',
-                'data-admin-query-tag': tagVal,
-                text: tagVal,
-            }));
-        updateAdminSongList()
-    });
-$("#song_list_table_tags").on('click', '[data-admin-query-tag]', function () {
-    $(this).remove();
-    updateAdminSongList();
-});
-
-function updateAdminSongList() {
-    let tags = [];
-    for (let tag of $("#song_list_table_tags [data-admin-query-tag]")) {
-        console.log(tag);
-        tags.push($(tag).attr('data-admin-query-tag'));
-    }
-    if (tags.length === 0) {
-        $("[data-song-uuid]").show();
-        return;
-    }
-    for (let uuid in adminSongs) {
-        let show = false;
-        if (adminSongs[uuid].tags) {
-            for (let tag of adminSongs[uuid].tags)
-                if (tags.includes(tag.tag)) {
-                    show = true;
-                    break;
-                }
-        }
-        if (show)
-            $("[data-song-uuid='" + uuid + "']").show();
-        else
-            $("[data-song-uuid='" + uuid + "']").hide();
-    }
-}
 
 $("#start_new_game_collapse_button").on('click', function () {
     socket.send(JSON.stringify({
@@ -692,14 +658,3 @@ $("[data-range-target]").on('change', function () {
     document.getElementById($(this).attr('data-range-target')).innerText = this.value;
 });
 
-function showAdmin(pwd) {
-    if (!pwd) {
-        pwd = prompt('Please enter the password');
-        if (!pwd) return;
-    }
-    socket.send(JSON.stringify({
-        command: 'admin_list_songs',
-        password: pwd
-    }));
-
-}

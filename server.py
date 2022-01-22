@@ -128,13 +128,14 @@ def fetch_last_fm(data, lastfm_track, uuid):
 
 
 # distribute points from distances
-def group_points(dists):
+def group_points(dists, inverse=False, real_points=None):
     points = {}
-    last_dist = not_quite_infinite
+    last_dist = -1 if inverse else not_quite_infinite
     last_points = len(dists)
-    real_points = last_points
+    if real_points is None:
+        real_points = last_points
     for p_uuid in dists:
-        if last_dist > dists[p_uuid]:
+        if (last_dist > dists[p_uuid] and not inverse) or (last_dist < dists[p_uuid] and inverse):
             last_dist = dists[p_uuid]
             last_points = real_points
         points[p_uuid] = last_points
@@ -164,39 +165,70 @@ async def game_show_result(g):
 
     g['state'] = 'results'
     results = []
-    artist_dists = {}
-    title_dists = {}
-    for p in g['players']:
-        guessed_title = p.guess['title'] if p.guess else ''
-        guessed_artist = p.guess['artist'] if p.guess else ''
+    if g['input_mode'] == 'mc':
+        correct_players = {}
+        for p in g['players']:
+            if p.presenter: continue
+            guessed_title = p.guess['title'] if p.guess else ''
+            guessed_artist = p.guess['artist'] if p.guess else ''
+            guess = {
+                'uuid': p.uuid,
+                'artist': guessed_artist if guessed_artist else '?',
+                'title': guessed_title if guessed_artist else '?',
+            }
+            results.append(guess)
+            if guessed_artist == current_question['artist'] and guessed_title == current_question['title']:
+                correct_players[p.uuid] = p.guess['time']
+        # sort by time
+        correct_players = {k: v for k, v in sorted(correct_players.items(), key=lambda item: item[1], reverse=False)}
+        print("correct_players", correct_players)
+        # award points
+        n_players = len(g['players'])
+        if g['presentation_mode']:
+            n_players = n_players-1
+        title_points = group_points(correct_players, True, n_players)
+        # finally award the points to the players
+        for p in g['players']:
+            if p.uuid in title_points:
+                p.points += title_points[p.uuid]
+                print(p.guess['time'], title_points[p.uuid])
+        # title_points = []
+        artist_points = []
+    else:
+        artist_dists = {}
+        title_dists = {}
+        for p in g['players']:
+            if p.presenter: continue
+            guessed_title = p.guess['title'] if p.guess else ''
+            guessed_artist = p.guess['artist'] if p.guess else ''
 
-        a_dist = calculate_string_distance(exp_artist, guessed_artist)
-        t_dist = calculate_string_distance(exp_title, guessed_title)
+            a_dist = calculate_string_distance(exp_artist, guessed_artist)
+            t_dist = calculate_string_distance(exp_title, guessed_title)
 
-        guess = {
-            'uuid': p.uuid,
-            'artist': guessed_artist if guessed_artist else '?',
-            'title': guessed_title if guessed_artist else '?',
-            'artist_distance': a_dist,
-            'title_distance': t_dist,
-        }
-        results.append(guess)
-        artist_dists[p.uuid] = a_dist
-        title_dists[p.uuid] = t_dist
-    # sort the distances
-    artist_dists = {k: v for k, v in sorted(artist_dists.items(), key=lambda item: item[1], reverse=True)}
-    title_dists = {k: v for k, v in sorted(title_dists.items(), key=lambda item: item[1], reverse=True)}
+            guess = {
+                'uuid': p.uuid,
+                'artist': guessed_artist if guessed_artist else '?',
+                'title': guessed_title if guessed_artist else '?',
+                'artist_distance': a_dist,
+                'title_distance': t_dist,
+            }
+            results.append(guess)
+            artist_dists[p.uuid] = a_dist
+            title_dists[p.uuid] = t_dist
+        # sort the distances
+        artist_dists = {k: v for k, v in sorted(artist_dists.items(), key=lambda item: item[1], reverse=True)}
+        title_dists = {k: v for k, v in sorted(title_dists.items(), key=lambda item: item[1], reverse=True)}
 
-    # award points for artist and title
-    artist_points = group_points(artist_dists)
-    title_points = group_points(title_dists)
+        # award points for artist and title
+        artist_points = group_points(artist_dists)
+        title_points = group_points(title_dists)
 
-    # finally award the points to the players
-    for p in g['players']:
-        if p.uuid in artist_points:
-            p.points += artist_points[p.uuid]
-        if p.uuid in title_points:
-            p.points += title_points[p.uuid]
+        # finally award the points to the players
+        for p in g['players']:
+            if p.uuid in artist_points:
+                p.points += artist_points[p.uuid]
+            if p.uuid in title_points:
+                p.points += title_points[p.uuid]
 
     await broadcast_to_game(g, {
         'action': 'show_stage',
@@ -210,7 +242,7 @@ async def game_show_result(g):
         'artist_points': artist_points,
         'title_points': title_points,
         'guesses': results,
-        'points': {u.uuid: u.points for u in g['players']},
+        'points': {u.uuid: u.points for u in g['players'] if not u.presenter},
         'words': g['words']})
     pass
 
@@ -224,8 +256,8 @@ async def send_join_game(websocket, g, host=False):
          'result_yt_id': 'dQw4w9WgXcQ',
          'words': g['words'],
          'host': host,
-         'points': {u.uuid: u.points for u in g['players']},
-         'players': {u.uuid: u.name for u in g['players']},
+         'points': {u.uuid: u.points for u in g['players'] if not u.presenter},
+         'players': {u.uuid: u.name for u in g['players'] if not u.presenter},
          }))
 
 
@@ -246,8 +278,14 @@ async def msg(str_msg, websocket):
             'state': 'WAITING',
             'current_song': None,
             'help_percentage': int(data['help_percentage']) if 'help_percentage' in data else 0,
+            'artist_only_chance': int(data['mc_chance_artist']) if 'mc_chance_artist' in data else 0,
+            'title_only_chance': int(data['mc_chance_title']) if 'mc_chance_title' in data else 0,
+            'input_mode': 'mc' if data['input_mode'] == 'mc' else 'input',
             'song_tags': data['song_tags'],
+            'presentation_mode': data['presentation_mode'],
         }
+        print(data['presentation_mode'])
+        websocket.presenter = data['presentation_mode'] == True
         GAMES[words] = game
         websocket.game = game
         print(f"new {game}")
@@ -260,12 +298,13 @@ async def msg(str_msg, websocket):
             return
         # Join game
         g = GAMES[data['words']]
+        websocket.presenter = False
         g['players'].append(websocket)
         websocket.game = g
         await broadcast_to_game(g, {'action': 'player_joined', 'name': websocket.name, 'uuid': websocket.uuid,
                                     'words': g['words'],
-                                    'points': {u.uuid: u.points for u in g['players']},
-                                    'players': {u.uuid: u.name for u in g['players']},
+                                    'points': {u.uuid: u.points for u in g['players'] if not u.presenter},
+                                    'players': {u.uuid: u.name for u in g['players'] if not u.presenter},
                                     })
         await send_join_game(websocket, g, False)
     elif data['command'] == 'game_next_req':
@@ -281,6 +320,7 @@ async def msg(str_msg, websocket):
         if not websocket.game:
             await websocket.send(json.dumps({'action': 'showerror', 'msg': 'No room found'}))
             return
+        data['guess']['time'] = time.time()
         websocket.guess = data['guess']
         if "announce" in websocket.guess:
             await broadcast_to_game(websocket.game, {
@@ -291,7 +331,7 @@ async def msg(str_msg, websocket):
 
         all_players_guessed = True
         for p in websocket.game['players']:
-            if not p.guess or "has_sent_guess" not in p.guess:
+            if not p.guess or "has_sent_guess" not in p.guess and not p.presenter:
                 all_players_guessed = False
                 break
         if all_players_guessed:  # next
@@ -335,6 +375,7 @@ async def msg(str_msg, websocket):
         if g['host'] != websocket:
             await websocket.send(json.dumps({'action': 'showerror', 'msg': 'Not the host'}))
             return
+        # Select a new song (the yt_id has not been used in the current game before)
         prev_str = '?' + ',?' * (len(g['previous']) - 1) if g['previous'] else ''
         if len(g['song_tags']) == 0:
             sqlite_cur.execute(f'SELECT songs.* FROM songs WHERE yt_id NOT IN ({prev_str}) ORDER BY RANDOM() LIMIT 1',
@@ -354,21 +395,11 @@ async def msg(str_msg, websocket):
         g['current_song'] = question_uuid
         g['state'] = 'playing'
         g['previous'].append(question['yt_id'])
-        for p in websocket.game['players']:
+        for p in websocket.game['players']: # clear guesses
             p.guess = None
-        fixed_choices = []
-        if g['help_percentage'] == 100:
-            fixed_choices.append({'artist': question['artist'], 'title': question['title']})
-            if len(g['song_tags']) == 0:
-                sqlite_cur.execute(f'SELECT songs.* FROM songs WHERE yt_id != ? AND title != ? ORDER BY RANDOM() LIMIT 3', [question['yt_id'], question['title']])
-            else:
-                params = g['song_tags'] + g['previous']
-                tag_str = '?' + ',?' * (len(g['song_tags']) - 1)
-                sqlite_cur.execute(
-                    f'SELECT songs.* FROM songs JOIN song_tags ON song_tags.song_uuid = songs.uuid AND song_tags.tag IN ({tag_str}) WHERE yt_id != ? AND title != ? ORDER BY RANDOM() LIMIT 1',
-                    params + [question['yt_id'], question['title']])
-            for row in sqlite_cur.fetchall():
-                fixed_choices.append({'artist': row['artist'], 'title': row['title']})
+        fixed_choices = [] # multiple choices
+        if g['input_mode'] == 'mc':
+            fixed_choices = get_fixed_choices(g, question)
             random.shuffle(fixed_choices)
         await broadcast_to_game(g, {'action': 'game_next',
                                     'path': f'songs/game/{question_uuid}.mp3',
@@ -521,6 +552,28 @@ async def msg(str_msg, websocket):
         await websocket.send(json.dumps({'msg': greeting}))
         print(f"> {greeting}")
 
+
+def get_fixed_choices(g, question):
+    fixed_choices = []
+    fixed_choices.append({'artist': question['artist'], 'title': question['title']})
+    if len(g['song_tags']) == 0:
+        if g['title_only_chance'] >= random.random() * 100:
+            sqlite_cur.execute(f'SELECT distinct title FROM songs WHERE yt_id != ? AND title != ? AND artist = ? ORDER BY RANDOM() LIMIT 3', [question['yt_id'], question['title'], question['artist']])
+            for row in sqlite_cur.fetchall():
+                fixed_choices.append({'artist': question['artist'], 'title': row['title']})
+            if len(fixed_choices) == 4:
+                return fixed_choices
+
+        sqlite_cur.execute(f'SELECT songs.* FROM songs WHERE yt_id != ? AND title != ? ORDER BY RANDOM() LIMIT 3', [question['yt_id'], question['title']])
+    else:
+        params = g['song_tags'] + g['previous']
+        tag_str = '?' + ',?' * (len(g['song_tags']) - 1)
+        sqlite_cur.execute(
+            f'SELECT songs.* FROM songs JOIN song_tags ON song_tags.song_uuid = songs.uuid AND song_tags.tag IN ({tag_str}) WHERE yt_id != ? AND title != ? ORDER BY RANDOM() LIMIT 1',
+            params + [question['yt_id'], question['title']])
+    for row in sqlite_cur.fetchall():
+        fixed_choices.append({'artist': row['artist'], 'title': row['title']})
+    return fixed_choices
 
 def find_yt_urls(youtube_id):
     ydl = youtube_dl.YoutubeDL()

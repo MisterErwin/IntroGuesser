@@ -199,18 +199,82 @@
                             </div>
 
                             <div class="mb-3 row">
-                                <label for="newGameSettingsHelpPercentage" class="col-sm-3 col-form-label">
-                                    % of letters shown (0 for no help - 100 for 4 choices)
-                                </label>
-                                <div class="col-sm-8">
-                                    <input type="range" class="form-range" min="0" max="100"
-                                           value="100"
-                                           id="newGameSettingsHelpPercentage"
-                                           data-range-target="newGameSettingsHelpPercentageSpan"
-                                    />
+                                <label for="newGameSettingsTags" class="col-sm-3 col-form-label">
+                                    Input Mode</label>
+                                <div class="col-sm-9">
+                                    <div class="btn-group d-flex" role="group" aria-label="Input mode">
+                                        <input type="radio" class="btn-check" name="new_game_mode" id="new_game_mode_mc" autocomplete="off" checked>
+                                        <label class="btn btn-outline-primary" for="new_game_mode_mc">Multiple Choice (mobile friendly)</label>
+
+                                        <input type="radio" class="btn-check" name="new_game_mode" id="new_game_mode_input" autocomplete="off">
+                                        <label class="btn btn-outline-primary" for="new_game_mode_input">Keyboard</label>
+
+                                    </div>
                                 </div>
-                                <div class="col-sm-1">
-                                    <span id="newGameSettingsHelpPercentageSpan">100</span>%
+                            </div>
+
+                            <div id="new_game_keyboard_container" style="display: none">
+                                <div class="mb-3 row">
+                                    <label for="newGameSettingsHelpPercentage" class="col-sm-3 col-form-label">
+                                        % of letters shown (0 for no help)
+                                    </label>
+                                    <div class="col-sm-8">
+                                            <input type="range" class="form-range" min="0" max="100"
+                                                   value="6"
+                                                   id="newGameSettingsHelpPercentage"
+                                                   data-range-target="newGameSettingsHelpPercentageSpan"
+                                            />
+                                    </div>
+                                    <div class="col-sm-1">
+                                        <span id="newGameSettingsHelpPercentageSpan">6</span>%
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="new_game_mc_container">
+                                <div class="mb-3 row">
+                                    <label for="newGameSettingsHelpPercentage" class="col-sm-3 col-form-label">
+                                        % for only showing the artist
+                                    </label>
+                                    <div class="col-sm-8">
+                                        <input type="range" class="form-range" min="0" max="100"
+                                               value="10"
+                                               id="newGameSettingsMCArtistOnlyChance"
+                                               data-range-target="newGameSettingsMCArtistOnlyChanceSpan"
+                                        />
+                                    </div>
+                                    <div class="col-sm-1">
+                                        <span id="newGameSettingsMCArtistOnlyChanceSpan">10</span>%
+                                    </div>
+                                </div>
+                                <div class="mb-3 row">
+                                    <label for="newGameSettingsHelpPercentage" class="col-sm-3 col-form-label">
+                                        % for only showing the title
+                                    </label>
+                                    <div class="col-sm-8">
+                                        <input type="range" class="form-range" min="0" max="100"
+                                               value="10"
+                                               id="newGameSettingsMCTitleOnlyChance"
+                                               data-range-target="newGameSettingsMCTitleOnlyChanceSpan"
+                                        />
+                                    </div>
+                                    <div class="col-sm-1">
+                                        <span id="newGameSettingsMCTitleOnlyChanceSpan">10</span>%
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3 row">
+                                <label for="newGameSettingsTags" class="col-sm-3 col-form-label">
+                                    Presentation Mode</label>
+                                <div class="col-sm-9">
+                                    <div class="btn-group d-flex" role="group" aria-label="Input mode">
+                                        <input type="radio" class="btn-check" name="new_game_presentation_mode" id="new_game_presentation_mode_off" autocomplete="off" checked>
+                                        <label class="btn btn-outline-primary" for="new_game_presentation_mode_off">Off (this device plays)</label>
+
+                                        <input type="radio" class="btn-check" name="new_game_presentation_mode" id="new_game_presentation_mode_on" autocomplete="off">
+                                        <label class="btn btn-outline-primary" for="new_game_presentation_mode_on">On (this device is only a presenter)</label>
+
+                                    </div>
                                 </div>
                             </div>
 
@@ -637,6 +701,8 @@
 <script src="peakhelper.js"></script>
 
 <script src="game.js"></script>
+<script src="admin.js"></script>
+
 <script src="qrcode.min.js" async></script>
 
 </body>

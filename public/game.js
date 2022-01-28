@@ -212,7 +212,7 @@ socket.addEventListener('message', function (event) {
             case 'join_game':
                 $("#addStuffButton").hide();
 
-                playNote(161.6, 'sine')
+                // playNote(161.6, 'sine')
                 document.getElementById('nav_room_code').value = data.words;
                 currentGame = data;
                 document.getElementById('gameSidebar').setAttribute('style', 'display:fixed !important');

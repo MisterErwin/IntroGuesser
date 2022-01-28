@@ -4,7 +4,7 @@ const socket = new WebSocket(
         (location.hostname === "localhost" || location.hostname === "127.0.0.1") ?
             'ws://localhost:8765' :
             'wss://introguesserws.cloud.luepg.es')
-    + '/version/1.1'
+    + '/version/1.2'
 );
 
 socket.addEventListener('close', function (event) {
@@ -40,7 +40,9 @@ socket.addEventListener('message', function (event) {
         errorModal.show();
         document.getElementById("errorModalBody").innerText = data.msg;
     } else if (data.action === 'welcome') {
-        document.getElementById('user_name').value = data.name;
+        // User name from local storage or random
+        document.getElementById('user_name').value = window.localStorage.hasOwnProperty("intro_user_name") ?
+            window.localStorage.getItem("intro_user_name") : data.name;
         $("#main-loading").hide();
         $("#main-screen").show();
         myUUID = data.uuid;
@@ -251,6 +253,12 @@ socket.addEventListener('message', function (event) {
                 $("#main-setup-1").show();
                 document.getElementById("setupPlayerArtist").value = "";
                 document.getElementById("setupPlayerTitle").value = "";
+                if (data['yt_id_done']) {
+                    let ytbtn = $('[data-ytid="' + data['yt_id_done'] + '"]');
+                    ytbtn.text("Successfully added").removeClass("btn-primary")
+                        .addClass("btn-secondary").attr("disabled");
+                    ytbtn.parent().parent().addClass("bg-success");
+                }
                 break;
             case 'song_get_data':
                 $("#main-setup-2").show();
@@ -281,6 +289,35 @@ socket.addEventListener('message', function (event) {
 
                 Object.assign(addSongData, data);
                 console.log(addSongData)
+                break;
+            case 'show_song_suggestions':
+                $("#main-setup-suggestions").show();
+                $("#new_song_suggestions_first").hide();
+                $("#new_song_suggestions_repeat").show();
+
+                let cardsGroup = $("#main-setup-suggestions_cards");
+                cardsGroup.html("");
+                for (let sug of data.suggestions) {
+                    let card = $("<div/>", {class: 'card', style: 'width: 18rem'}).appendTo($("<div/>", {class: 'col'}).appendTo(cardsGroup));
+                    $("<img/>", {src: sug['cover'], class: 'card-img-top', style: 'width: 18rem; height: 18rem; background: grey;'}).appendTo(card);
+                    let cardBody = $("<div/>", {class: 'card-body'}).appendTo(card);
+                    $("<h5/>", {class: 'card-title', text: sug['artist'] + " - " + sug['title']}).appendTo(cardBody)
+                    if (sug['yt_url'])
+                        $("<a/>", {class: 'card-link', text: 'Listen', 'target': '__blank', 'href': sug['yt_url']}).appendTo(cardBody);
+                    else
+                        $("<a/>", {class: 'card-link', text: 'More', 'target': '__blank', 'href': sug['lastfm_url']}).appendTo(cardBody);
+
+                    $("<br/>").appendTo(cardBody);
+                    $("<btn/>", {
+                        class: 'btn btn-primary suggestion-song-card-btn',
+                        text: 'Add as into',
+                        'data-title': sug['title'],
+                        'data-artist': sug['artist'],
+                        'data-yturl': sug['yt_url'],
+                        'data-ytid': sug['yt_id'],
+                    }).appendTo(cardBody);
+                }
+                $('[data-action="new_song_suggestions"]').removeAttr('disabled');
                 break;
             case 'admin_show_songs':
                 $("#main-song-list").show();
@@ -397,8 +434,11 @@ const qrModal = new bootstrap.Modal(document.getElementById('qrModal'), {
     close: 'true',
 })
 
+$("[data-action='new_song_suggestions']").on('click', function () {
+    socket.send(JSON.stringify({'command': 'find_song_suggestions'}));
+});
+
 $("#new_song_watch").on('paste',  function (e) {
-    console.log(e);
     let paste = (e.originalEvent.clipboardData || window.clipboardData).getData('text');
     if (paste.startsWith("https")) {
         $("#new_song_watch").val(new URLSearchParams(new URL(paste).search).get('v'));
@@ -460,10 +500,12 @@ $("#setupAddButton").on('click', function () {
 
 
 $("#join_game_button").on('click', function () {
+    const name = document.getElementById('user_name').value;
+    window.localStorage.setItem('intro_user_name', name);
     socket.send(JSON.stringify({
         'command': 'join_game',
         'words': document.getElementById('join_game_words').value,
-        'name': document.getElementById('user_name').value
+        'name': name
     }));
 });
 
@@ -481,6 +523,7 @@ $('#new_game_mode_input').change(function(){
 });
 
 $("#start_new_game_button").on('click', function () {
+    window.localStorage.setItem('intro_user_name', name);
     socket.send(JSON.stringify({
         'command': 'start_game',
         'words': document.getElementById('join_game_words').value,
@@ -658,3 +701,9 @@ $("[data-range-target]").on('change', function () {
     document.getElementById($(this).attr('data-range-target')).innerText = this.value;
 });
 
+$("#main-setup-suggestions_cards").on('click', '.suggestion-song-card-btn', function (){
+    $("#new_song_watch").val($(this).attr('data-ytid'));
+    $("#setupPlayerArtist").val($(this).attr('data-artist'));
+    $("#setupPlayerTitle").val($(this).attr('data-title'));
+    $("main").hide();$("#main-setup-1").show();
+})

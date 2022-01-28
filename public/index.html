@@ -264,8 +264,7 @@
                             </div>
 
                             <div class="mb-3 row">
-                                <label for="newGameSettingsTags" class="col-sm-3 col-form-label">
-                                    Presentation Mode</label>
+                                <label class="col-sm-3 col-form-label">Presentation Mode</label>
                                 <div class="col-sm-9">
                                     <div class="btn-group d-flex" role="group" aria-label="Input mode">
                                         <input type="radio" class="btn-check" name="new_game_presentation_mode" id="new_game_presentation_mode_off" autocomplete="off" checked>
@@ -359,21 +358,21 @@
                     <div class="mb-3 row">
                         <div class="d-grid gap-2">
                             <button type="button" class="btn btn-primary gameGuessButtonFixed" id="gameGuessButtonFixed1">
-                                Choice 1
+                                Choice 2
                             </button>
                         </div>
                     </div>
                     <div class="mb-3 row">
                         <div class="d-grid gap-2">
                             <button type="button" class="btn btn-primary gameGuessButtonFixed" id="gameGuessButtonFixed2">
-                                Choice 1
+                                Choice 3
                             </button>
                         </div>
                     </div>
                     <div class="mb-3 row">
                         <div class="d-grid gap-2">
                             <button type="button" class="btn btn-primary gameGuessButtonFixed" id="gameGuessButtonFixed3">
-                                Choice 1
+                                Choice 4
                             </button>
                         </div>
                     </div>
@@ -458,7 +457,11 @@
         <main class="flex-shrink-0" style="display: none" id="main-setup-1">
             <div class="container">
                 <h1 class="mt-5">Add a new song</h1>
-                <p class="lead">Just copy the youtube URL and hit next.</p>
+                <p class="lead">
+                    To add a new songs, copy the youtube URL and paste it into the field.
+                    <br/><br/>
+                    Thanks for adding new intros :)
+                </p>
                 <div class="input-group mb-2">
                     <div class="input-group-prepend">
                         <div class="input-group-text">https://youtube.com?watch?v=</div>
@@ -466,8 +469,20 @@
                     <input type="text" class="form-control" id="new_song_watch" placeholder="play link"
                            aria-label="youtube watch parameter">
                 </div>
-                <div class="d-grid gap-2">
+                <div class="d-grid gap-2 mb-2">
                     <button type="button" class="btn btn-primary btn-block" id="new_song_next">Next</button>
+                </div>
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-info btn-block click-once"
+                            data-action="new_song_suggestions" id="new_song_suggestions_first">
+                        No idea? Get some suggestions.
+                    </button>
+                    <button type="button" class="btn btn-info btn-block"
+                            style="display: none"
+                            onclick="$('main').hide();$('#main-setup-suggestions').show();"
+                            id="new_song_suggestions_repeat">
+                        Still no idea? Show me the suggestions again.
+                    </button>
                 </div>
             </div>
         </main>
@@ -509,7 +524,10 @@
             <div class="container">
                 <h1 class="mt-5">Select into duration and song data</h1>
                 <p class="lead">We have downloaded the first 20 seconds - please choose the time (in ms) which should be
-                    played as well as the artists name and song title.</p>
+                    played as well as the artists name and song title.<br/><br/>
+                    Some music videos like to start quite late,
+                    so sometimes searching for a lyrics video instead of the official music video is better.
+                </p>
                 <form>
                     <div class="mb-3 row">
                         <label for="setupPlayerAlbum" class="col-sm-2 col-form-label">Album</label>
@@ -609,6 +627,21 @@
             </div>
         </main>
 
+
+        <main class="flex-shrink-0" style="display: none" id="main-setup-suggestions">
+            <div class="container">
+                <h1 class="mt-5">Choose a song from the suggestions</h1>
+                <p class="lead">
+                    We have randomly selected some songs, which you may want to add.
+                </p>
+                <div class="row row-cols-1 row-cols-md-3 g-4" id="main-setup-suggestions_cards"></div>
+                <div class="row">
+                    <button type="button" class="btn btn-info btn-block click-once" data-action="new_song_suggestions">
+                        Roll the dice again
+                    </button>
+                </div>
+            </div>
+        </main>
 
         <main class="flex-shrink-0" style="display: none" id="main-song-list">
             <div class="container">

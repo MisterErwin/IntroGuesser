@@ -8,3 +8,4 @@ random-word~=1.0.7
 pyyaml~=5.4.1
 python-Levenshtein~=0.12.2
 python-dotenv~=0.17.0
+lxml~=4.7.1

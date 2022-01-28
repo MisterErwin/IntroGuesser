@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY server.py ./
+COPY serverhelper.py ./
 
 EXPOSE 8765
 

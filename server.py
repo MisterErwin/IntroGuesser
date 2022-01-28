@@ -6,11 +6,8 @@ import traceback
 import websockets
 import ffmpeg
 import json
-import youtube_dl
 import uuid
 
-from pylast import WSError
-from tinydb import TinyDB, Query
 import re
 from random_word import RandomWords
 from Levenshtein import distance as levenshtein_distance
@@ -20,6 +17,9 @@ import pylast
 import random
 import math
 from dotenv import load_dotenv
+import lxml.html as lxhtml
+import requests
+from serverhelper import fetch_last_fm
 
 load_dotenv()
 
@@ -40,9 +40,9 @@ lastfm_network = pylast.LastFMNetwork(
 
 
 async def handle(websocket, path):
-    if path != '/version/1.1':
+    if path != '/version/1.2':
         await websocket.send(json.dumps({'action': 'showerror',
-                                         'msg': 'The client and server version are not compatible! Please reload your page'}))
+                                         'msg': 'The client and server version are not compatible! Please reload your page...'}))
         await asyncio.sleep(10)
         await websocket.close()
         return
@@ -67,6 +67,7 @@ async def handle(websocket, path):
         if websocket.game:
             g = websocket.game
             print("Leaving " + g['words'])
+            g['offline_points'][websocket.name] = websocket.points
             g['players'].remove(websocket)
             if len(g['players']) == 0:
                 print("Deleting " + g['words'])
@@ -106,25 +107,6 @@ def calculate_string_distance(orig, reply):
     d = levenshtein_distance(re.sub(r'[^a-z0-9]+', '', orig.lower()), re.sub(r'[^a-z0-9]+', '', reply.lower()))
     return (1 - min(1, d / len(reply))) if len(reply) else -5
 
-
-def fetch_last_fm(data, lastfm_track, uuid):
-    print("FETCHING ", lastfm_track)
-    try:
-        data['error'] = False
-        data['lastfm_url'] = lastfm_track.get_url()
-        a = lastfm_track.get_album()
-        data['lastfm_album'] = a.get_name() if a else None
-        try:
-            data['lastfm_cover'] = lastfm_track.get_cover_image()
-        except IndexError:
-            data['lastfm_cover'] = None
-            pass
-        data['lastfm_tags'] = [{'song': uuid, 'tag': x.item.name, 'weight': x.weight} for x in
-                               lastfm_track.get_top_tags(10)]
-        print(data)
-    except WSError as e:
-        data['error'] = e.details
-        print("Error", e)
 
 
 # distribute points from distances
@@ -272,6 +254,7 @@ async def msg(str_msg, websocket):
             'host': websocket,
             'words': words,
             'players': [websocket],
+            'offline_points': {},
             'previous': [],
             'current': None,
             'last_seen': None,
@@ -299,9 +282,13 @@ async def msg(str_msg, websocket):
         # Join game
         g = GAMES[data['words']]
         websocket.presenter = False
+        if websocket.name in g['offline_points']:
+            websocket.points = g['offline_points'][websocket.name]
         g['players'].append(websocket)
         websocket.game = g
-        await broadcast_to_game(g, {'action': 'player_joined', 'name': websocket.name, 'uuid': websocket.uuid,
+        await broadcast_to_game(g, {'action': 'player_joined',
+                                    'name': websocket.name,
+                                    'uuid': websocket.uuid,
                                     'words': g['words'],
                                     'points': {u.uuid: u.points for u in g['players'] if not u.presenter},
                                     'players': {u.uuid: u.name for u in g['players'] if not u.presenter},
@@ -498,8 +485,15 @@ async def msg(str_msg, websocket):
         await websocket.send(json.dumps({'action': 'show_progress', 'msg': 'Working on intro'}))
 
         print(f"Converting snippet from {time_start} to {time_end} for {duration}ms")
-        ffmpeg.input(song_tmp_path, t=f'{duration}ms', ss=f'{time_start}ms') \
-            .output(song_final_path, codec='libmp3lame').run()
+        for i in range(5):
+            try:
+                ffmpeg.input(song_tmp_path, t=f'{duration}ms', ss=f'{time_start}ms') \
+                    .output(song_final_path, codec='libmp3lame').run()
+                break
+            except ffmpeg.Error:
+                print(f"Failed to download - retrying")
+                await asyncio.sleep(5)
+
         os.remove(song_tmp_path)
 
         lastfm_track = lastfm_network.get_track(data['artist'].strip(), data['title'].strip())
@@ -520,7 +514,13 @@ async def msg(str_msg, websocket):
         song_long_path = 'public/songs/game/' + data['yt_id'] + '.mp3'
         if not os.path.isfile(song_long_path):
             print(f"Downloading long 60s")
-            ffmpeg.input(yt['url'], t=60, ss=f'{time_start}ms').output(song_long_path, codec='libmp3lame').run()
+            for i in range(5):
+                try:
+                    ffmpeg.input(yt['url'], t=60, ss=f'{time_start}ms').output(song_long_path, codec='libmp3lame').run()
+                    break
+                except ffmpeg.Error:
+                    print(f"Failed to download - retrying")
+                    await asyncio.sleep(5)
         song_data = {'type': 'song',
                      'yt_id': data['yt_id'],
                      'uuid': song_uuid,
@@ -544,14 +544,59 @@ async def msg(str_msg, websocket):
             lastfm_data['lastfm_tags'])
         sqlite_con.commit()
 
-        await websocket.send(json.dumps({'action': 'show_stage', 'stage': 'song_init'}))
+        await websocket.send(json.dumps({'action': 'show_stage', 'stage': 'song_init', 'yt_id_done': data['yt_id']}))
+    elif data['command'] == 'find_song_suggestions':
+        sqlite_cur.execute(f'SELECT title, artist FROM songs WHERE lastfm_url IS NOT NULL ORDER BY RANDOM() LIMIT 3')
+        suggestions = []
+        for row in sqlite_cur.fetchall():
+            track = lastfm_network.get_track(row['artist'], row['title'])
+            if track:
+                # find some similar songs
+                for st in track.get_similar(7):
+                    suggestions.append(
+                        tuple([st.item.artist.name, st.item.title, get_cover_image(st.item), st.item.get_url()]))
+                # find more from artist
+                for at in track.artist.get_top_tracks(7):
+                    suggestions.append(
+                        tuple([at.item.artist.name, at.item.title, get_cover_image(at.item), at.item.get_url()]))
+        suggestions = list(set(suggestions))  # remove duplicates
+        print("fetched", len(suggestions), "possible")
+        artists = list(set([sug[0] for sug in suggestions]))
+        artist_q = '?' + ',?' * (len(artists) - 1)
 
+        sqlite_cur.execute(f'SELECT title, artist FROM songs WHERE artist IN ({artist_q})', artists)
+        sugRem = []
+        for row in sqlite_cur.fetchall():
+            sugRem.append(tuple([row['artist'].lower(), row['title'].lower()]))
+        print("Removing", len(sugRem))
+        sugs = []
+        for s in suggestions[:20]: # keep it somewhat short
+            if tuple([s[0].lower(), s[1].lower()]) in sugRem:
+                continue
+            req = requests.get(s[3])
+            x = lxhtml.fromstring(req.text)
+            yt_url = x.xpath('//a[contains(@class,"play-this-track-playlink")][@data-youtube-url]/@data-youtube-url')
+            yt_id = x.xpath('//a[contains(@class,"play-this-track-playlink")][@data-youtube-id]/@data-youtube-id')
+            sugs.append({'artist': s[0], 'title': s[1], 'cover': s[2], 'lastfm_url': s[3],
+                         'yt_url': yt_url[0] if yt_url else None,
+                         'yt_id': yt_id[0] if yt_id else None,
+                         })
+        print(sugs)
+        print("Found ", len(sugs))
+        await websocket.send(
+            json.dumps({'action': 'show_stage', 'stage': 'show_song_suggestions', 'suggestions': sugs}))
     else:
         greeting = f"Hello {data}!"
 
         await websocket.send(json.dumps({'msg': greeting}))
         print(f"> {greeting}")
 
+
+def get_cover_image(track):
+    try:
+        return track.get_cover_image()
+    except IndexError:
+        return None
 
 def get_fixed_choices(g, question):
     fixed_choices = []
@@ -575,90 +620,9 @@ def get_fixed_choices(g, question):
         fixed_choices.append({'artist': row['artist'], 'title': row['title']})
     return fixed_choices
 
-def find_yt_urls(youtube_id):
-    ydl = youtube_dl.YoutubeDL()
-    try:
-        with ydl:
-            res = ydl.extract_info('https://www.youtube.com/watch?v=' + youtube_id, download=False)
-            if 'entries' in res:
-                raise Exception("Playlist not supported")
-            for f in res['formats']:
-                if f['format_id'] == "140":
-                    return {
-                        'url': f['url'],
-                        'title': res['title'],
-                        'id': res['id'],
-                    }
-    except:
-        return False
 
 
-def migrate():
-    QQ = Query()
-    db = TinyDB('db.json')
-    songs = db.search(QQ.type == 'song')
-    gamedir = 'public/songs/game/'
-    for s in songs:
-        # Migration 1: Download 60sec "result" track
-        path = gamedir + s['yt_id'] + '.mp3'
-        if not os.path.isfile(path):
-            print("Migrating by downloading long file to " + path)
-            starttime = s['time_start'] if 'time_start' in s else 0
-            yt = find_yt_urls(s['yt_id'])
-            if yt:
-                song_long_path = 'public/songs/game/' + s['yt_id'] + '.mp3'
-                ffmpeg.input(yt['url'], t=60, ss=f'{starttime}ms').output(song_long_path, codec='libmp3lame').run()
-
-        # migrate into
-        if s['type'] == 'song':
-            s['title'] = s['title'].strip()
-            s['artist'] = s['artist'].strip()
-
-            sqlite_cur.execute('SELECT 1 FROM songs WHERE uuid=?', (s['uuid'],))
-            if not sqlite_cur.fetchone():
-                print("Migrating to db")
-                print(s)
-                if "lastfm_url" not in s:
-                    lastfm_track = lastfm_network.get_track(s['artist'], s['title'])
-                    try:
-                        print(lastfm_track)
-                        s['lastfm_url'] = lastfm_track.get_url()
-                        a = lastfm_track.get_album()
-                        s['lastfm_album'] = a.get_name() if a else None
-                        try:
-                            s['lastfm_cover'] = lastfm_track.get_cover_image()
-                        except IndexError:
-                            s['lastfm_cover'] = None
-                            pass
-                        s['lastfm_tags'] = [{'song': s['uuid'], 'tag': x.item.name, 'weight': x.weight} for x in
-                                            lastfm_track.get_top_tags(10)]
-                        time.sleep(1)
-                    except WSError as e:
-                        if e.details == 'Track not found':
-                            s['lastfm_url'] = None
-                            s['lastfm_album'] = None
-                            s['lastfm_cover'] = None
-                            s['lastfm_tags'] = []
-                        else:  # some other error
-                            raise e
-                # Migrate: Insert into DB
-                if 'time_created' not in s:
-                    s['time_created'] = 0
-                if 'time_start' not in s:
-                    s['time_start'] = 0
-                if 'client_ip' not in s:
-                    s['client_ip'] = '127.0.0.1'
-                print(s)
-                sqlite_con.execute(
-                    "insert into songs (yt_id, uuid, artist, title, time_created, duration, time_start, client_ip, lastfm_url, lastfm_album, lastfm_cover) "
-                    + " values (:yt_id, :uuid, :artist, :title, :time_created, :time, :time_start, :client_ip, :lastfm_url, :lastfm_album, :lastfm_cover)",
-                    s)
-                sqlite_con.executemany(
-                    "insert into song_tags (song_uuid, tag, weight) "
-                    + " values (:song, :tag, :weight)",
-                    s['lastfm_tags'])
-                sqlite_con.commit()
-
+from serverhelper import migrate, find_yt_urls
 
 sqlite_con.execute('''CREATE TABLE IF NOT EXISTS songs
                (yt_id text, uuid text, artist text, title text, time_created real, duration real,
@@ -668,7 +632,7 @@ sqlite_con.execute('''CREATE TABLE IF NOT EXISTS song_tags
 sqlite_con.execute('''CREATE TABLE IF NOT EXISTS song_reports
                (song_uuid text, time_created text, client_ip text, type text)''')
 
-migrate()
+migrate(sqlite_cur, sqlite_con, lastfm_network)
 print("Starting...")
 start_server = websockets.serve(handle, "0.0.0.0", 8765)
 

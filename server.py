@@ -449,7 +449,13 @@ async def msg(str_msg, websocket):
         await websocket.send(json.dumps({'action': 'show_progress', 'msg': 'Downloading song...'}))
         song_uuid = str(uuid.uuid4())
         songpath = f'songs/tmp/{song_uuid}.mp3'
-        ffmpeg.input(yt['url'], t=20).output('public/' + songpath, codec='libmp3lame').run()
+        for i in range(5):
+            try:
+                ffmpeg.input(yt['url'], t=20).output('public/' + songpath, codec='libmp3lame').run()
+                break
+            except ffmpeg.Error:
+                print(f"Failed to download - retrying")
+                await asyncio.sleep(5)
         await websocket.send(
             json.dumps({'action': 'show_stage',
                         'stage': 'song_get_data',

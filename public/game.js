@@ -15,8 +15,10 @@ socket.addEventListener('close', function (event) {
 });
 socket.addEventListener('open', function (event) {
     let urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has('r'))
+    if (urlParams.has('r')) {
         document.getElementById('join_game_words').value = decodeURIComponent(urlParams.get('r'));
+        $("#join_game_words").parent().parent().hide();
+    }
 });
 
 

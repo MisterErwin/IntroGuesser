@@ -223,6 +223,23 @@ socket.addEventListener('message', function (event) {
                 if (data.state === 'WAITING') {
                     $("#game-screen-waiting").show();
                 } else if (data.state === 'playing') {
+                    if (data.fixed_choices && data.fixed_choices.length > 1) {
+                        $("#gamePlayFixedInputs").show();
+                        $("#gamePlayInput").hide();
+                        for (let i=0;i<4;i++) {
+                            $("#gameGuessButtonFixed" + i).data('title', data.fixed_choices[i].title)
+                                .data('artist', data.fixed_choices[i].artist)
+                                .text(data.fixed_choices[i].title + " - " + data.fixed_choices[i].artist)
+                                .removeClass("btn-info")
+                                .addClass("btn-primary");
+                        }
+                    }else {
+                        $("#gamePlayInput").show();
+                        $("#gamePlayFixedInputs").hide();
+                        $("#gameArtist").attr('placeholder', data.help_artist);
+                        $("#gameTitle").attr('placeholder', data.help_title);
+                    }
+
                     $("#game-screen-playing").show();
                 } else if (data.state === 'results') {
                     $("#game-screen-results").show();

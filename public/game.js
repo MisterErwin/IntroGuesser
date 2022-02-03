@@ -528,11 +528,12 @@ $('#new_game_mode_input').change(function(){
 });
 
 $("#start_new_game_button").on('click', function () {
+    let name = document.getElementById('user_name').value;
     window.localStorage.setItem('intro_user_name', name);
     socket.send(JSON.stringify({
         'command': 'start_game',
         'words': document.getElementById('join_game_words').value,
-        'name': document.getElementById('user_name').value,
+        'name': name,
         'song_tags': $("#newGameSettingsTags").val(),
         'input_mode': $("#new_game_mode_mc").is(':checked') ? 'mc' : 'input',
         'help_percentage': $("#newGameSettingsHelpPercentage").val(),

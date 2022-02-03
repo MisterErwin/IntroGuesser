@@ -410,15 +410,18 @@ socket.addEventListener('message', function (event) {
 
 function updatePlayerSidebar(players, points, gameSidebarPlayersUl) {
     currentGame.players = players;
-    for (let gameuuid in players) {
-        if (!players.hasOwnProperty(gameuuid)) continue;
-        let li = $("<li/>", {class: 'nav-item text-secondary', 'data-player-uuid': gameuuid});
+    let playerUUIDsSorted = Object.keys(players);
+    playerUUIDsSorted.sort((a, b) => (points[a] < points[b]) ? 1 : -1);
+
+    for (let playerUUID of playerUUIDsSorted) {
+        if (!players.hasOwnProperty(playerUUID)) continue;
+        let li = $("<li/>", {class: 'nav-item text-secondary', 'data-player-uuid': playerUUID});
         li.appendTo(gameSidebarPlayersUl);
         $("<a/>", {
-            'href': '#', 'class': 'nav-link', 'text': players[gameuuid] +
+            'href': '#', 'class': 'nav-link', 'text': players[playerUUID] +
                 ' ' +
-                (gameuuid in points ? ('[' + points[gameuuid] + ']') : '[-]')
-                + (gameuuid === myUUID ? " (you) " : "")
+                (playerUUID in points ? ('[' + points[playerUUID] + ']') : '[-]')
+                + (playerUUID === myUUID ? " (you) " : "")
         })
             .appendTo(li);
     }

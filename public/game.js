@@ -180,6 +180,8 @@ socket.addEventListener('message', function (event) {
                     guessNode.stop(0);
 
                 loadIntoBuffer(data.long_file, function (b) {
+                    if (resultNode)
+                        resultNode.stop(0);
                     // Play the long variant and fade to zero in the last few seconds
                     let gain = audioContext.createGain();
                     gain.connect(getMasterGain())

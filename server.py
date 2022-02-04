@@ -350,6 +350,7 @@ async def msg(str_msg, websocket):
         if g['state'] == 'results':
             await broadcast_to_game(g, {
                 'action': 'results_progress_bar',
+                'text': 'Prepare for the next song!',
                 'value': '100',
                 'time': data['time'],
                 'words': g['words']})

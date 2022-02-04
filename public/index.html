@@ -126,7 +126,10 @@
             <div class="container">
                 <h1 class="mt-5">Guess the Intro</h1>
                 <p class="lead">Welcome....
-                    I have no idea what to write here</p>
+                    I have no idea what to write here
+                    <br/><br/>
+                    Remember to toggle the WiFi button down below if you are on mobile data!
+                </p>
                 <div class="input-group mb-2">
                     <label for="user_name" class="col-sm-2 col-form-label">My display name</label>
                     <div class="col-sm-10">
@@ -141,8 +144,7 @@
                     </div>
                 </div>
                 <div class="d-grid gap-2">
-                    <button type="button" class="btn btn-primary btn-block click-once" id="join_game_button">Join game
-                    </button>
+                    <button type="button" class="btn btn-primary btn-block click-once" id="join_game_button">Join game</button>
                 </div>
                 <hr/>
                 <div class="d-grid gap-2">
@@ -387,7 +389,8 @@
                 <div class="progress mb-3">
                     <div class="progress-bar bg-info" id="gameProgressBar" role="progressbar"
                          style="width: 1%; transition: initial"
-                         aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+                         aria-valuenow="100" aria-valuemin="0" aria-valuemax="100">
+                    </div>
                 </div>
 
             </div>
@@ -444,12 +447,13 @@
                 </div>
                 <a type="button" href="#" data-song-report-button="wrong">Report this song as being wrong</a>
 
-                <div class="progress mb-3">
-                    <div class="progress-bar bg-info" id="resultsProgressBar" role="progressbar"
-                         style="width: 0; transition: initial"
-                         aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+                <div style="position: -webkit-sticky; position: sticky; bottom: 10px">
+                    <div class="progress mb-3">
+                        <div class="progress-bar bg-info" id="resultsProgressBar" role="progressbar"
+                             style="width: 0; transition: initial"
+                             aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
                 </div>
-
 
             </div>
         </main>
@@ -671,13 +675,24 @@
 
 <footer class="footer mt-auto py-3 bg-light" style="z-index: 111">
     <div class="container">
-        <div class="col-md-3 col-lg-2">
-            <span class="text-muted">Volume:</span>
-            <input type="range" class="form-range" min="0" max="100" id="masterVolume" aria-label="Volume"
-                   title="Volume" value="90">
+        <div class="col-md-x3 col-lg-2">
+            <div class="row mb-3">
+                <label ondblclick="showDebug()" for="masterVolume" class="col-sm-3 col-form-label col-form-label-sm" style="">Volume:</label>
+                <div class="col-sm-7">
+                    <input type="range" class="form-range form-control form-control-sm" min="0" max="100" id="masterVolume" aria-label="Volume"
+                           title="Volume" value="90">
+                </div>
+                <div class="col-sm-1">
+                    <button type="button" class="btn btn-primary btn-block btn-sm" id="btn_wifi_toggle" value="wifi">WiFi</button>
+                </div>
+            </div>
         </div>
     </div>
 </footer>
+
+<!--Toast div-->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1101" id="toastContainer">
+</div>
 
 
 <!-- Modal -->

@@ -28,6 +28,7 @@ let currentGame = undefined;
 let resultNode;
 let guessNode;
 let adminSongs;
+let dataSaveMode = false;
 // Listen for messages
 socket.addEventListener('message', function (event) {
     const data = JSON.parse(event.data);
@@ -80,6 +81,8 @@ socket.addEventListener('message', function (event) {
         document.getElementById('gameProgressBar').style.width = data['value'] + '%';
         document.getElementById('gameProgressBar').style.transition = 'width ' + data['time'] + 's linear';
     } else if (data.action === 'results_progress_bar') {
+        if (data['text'])
+            document.getElementById('resultsProgressBar').textContent = data['text'];
         document.getElementById('resultsProgressBar').style.width = data['value'] + '%';
         document.getElementById('resultsProgressBar').style.transition = 'width ' + data['time'] + 's linear';
     } else if (data.action === 'game_next') {
@@ -125,9 +128,10 @@ socket.addEventListener('message', function (event) {
 
         document.getElementById('gameProgressBar').style.width = '0%';
         document.getElementById('gameProgressBar').style.transition = 'initial';
-        loadIntoBuffer(currentGame.path, function () {
-            guessNode = playSound(setupBuffer)
-        });
+        if (!dataSaveMode)
+            loadIntoBuffer(currentGame.path, function () {
+                guessNode = playSound(setupBuffer)
+            });
 
         currentGame.autoSaveGuessTimer = window.setInterval(function () {
             sendGuess(false);
@@ -160,13 +164,17 @@ socket.addEventListener('message', function (event) {
 
                 has_sent_guess = false;
 
+                document.getElementById('resultsProgressBar').textContent = '';
                 document.getElementById('resultsProgressBar').style.width = '0%';
                 document.getElementById('resultsProgressBar').style.transition = 'initial';
 
                 $("#gameResultsRequestButton").show();
                 $("#gameResultsButton").hide();
 
-                if (data['cover_image']) {
+                if (dataSaveMode) {
+                    $("#game-screen-results-image").hide();
+                    $("#game-screen-results-video").hide();
+                }else if (data['cover_image']) {
                     $("#game-screen-results-image").show();
                     $("#game-screen-results-video").hide();
                     document.getElementById('game-screen-results-image').src = data['cover_image'];
@@ -179,16 +187,17 @@ socket.addEventListener('message', function (event) {
                 if (guessNode)
                     guessNode.stop(0);
 
-                loadIntoBuffer(data.long_file, function (b) {
-                    if (resultNode)
-                        resultNode.stop(0);
-                    // Play the long variant and fade to zero in the last few seconds
-                    let gain = audioContext.createGain();
-                    gain.connect(getMasterGain())
-                    resultNode = playSound(b, gain);
-                    gain.gain.setValueAtTime(1, audioContext.currentTime + 52);
-                    gain.gain.exponentialRampToValueAtTime(.001, audioContext.currentTime + 59);
-                })
+                if(!dataSaveMode)
+                    loadIntoBuffer(data.long_file, function (b) {
+                        if (resultNode)
+                            resultNode.stop(0);
+                        // Play the long variant and fade to zero in the last few seconds
+                        let gain = audioContext.createGain();
+                        gain.connect(getMasterGain())
+                        resultNode = playSound(b, gain);
+                        gain.gain.setValueAtTime(1, audioContext.currentTime + 52);
+                        gain.gain.exponentialRampToValueAtTime(.001, audioContext.currentTime + 59);
+                    })
 
                 const tbody = $("#game-screen-results-tbody");
                 tbody.html("");
@@ -250,7 +259,7 @@ socket.addEventListener('message', function (event) {
                 }
                 window.history.pushState({}, '', window.location.protocol + "//" + window.location.host + window.location.pathname + '?r=' + encodeURIComponent(data.words));
 
-                if (currentGame.path) {
+                if (currentGame.path && !dataSaveMode) {
                     loadIntoBuffer(currentGame.path, function () {
                         guessNode = playSound(setupBuffer)
                     });
@@ -275,6 +284,7 @@ socket.addEventListener('message', function (event) {
                 document.getElementById("setupPlayerArtist").value = "";
                 document.getElementById("setupPlayerTitle").value = "";
                 if (data['yt_id_done']) {
+                    showToast('Added song', 'Successfully added that song');
                     let ytbtn = $('[data-ytid="' + data['yt_id_done'] + '"]');
                     ytbtn.text("Successfully added").removeClass("btn-primary")
                         .addClass("btn-secondary").attr("disabled");
@@ -575,7 +585,7 @@ $("#gameResultsRequestButton").on('click', function () {
 
 
 $("#gamePlayButton").on('click', function () {
-    if (currentGame)
+    if (currentGame && !dataSaveMode)
         loadIntoBuffer(currentGame.path, function () {
            guessNode = playSound(setupBuffer)
         });
@@ -732,3 +742,37 @@ $("#main-setup-suggestions_cards").on('click', '.suggestion-song-card-btn', func
     $("#setupPlayerTitle").val($(this).attr('data-title'));
     $("main").hide();$("#main-setup-1").show();
 })
+
+$("#btn_wifi_toggle").click(function (){
+   if ($(this).val() === 'wifi') {
+       $(this).removeClass("btn-primary").addClass("btn-secondary").text("data").val("data");
+       showToast("Data friendly mode enabled", "No longer loading entire songs to play - ask someone else to play the songs for you!");
+       dataSaveMode = true;
+       $("#gamePlayButton").hide();
+   }else{
+       $(this).removeClass("btn-secondary").addClass("btn-primary").text("WiFi").val("wifi");
+       showToast("Data friendly mode disabled", "Now playing the songs on your device - Watch your data usage :)")
+       dataSaveMode = false;
+       $("#gamePlayButton").show();
+   }
+});
+
+function showToast(header, body, options) {
+    let $toastDiv = $("<div/>", {class: 'toast hide', role: 'alert', 'aria-live': 'assertive', 'aria-atomic': 'true'});
+    $toastDiv.appendTo($("#toastContainer"));
+    let $headerDiv = $("<div/>", {class: 'toast-header'}).appendTo($toastDiv);
+    $("<strong/>", {class: 'me-auto'}).text(header).appendTo($headerDiv);
+    $("<button/>", {class: 'btn-close', 'data-bs-dismiss': 'toast', 'aria-label': 'Close'}).appendTo($headerDiv);
+    $("<div/>", {class: 'toast-body'}).html(body).appendTo($toastDiv);
+    let theToast = new bootstrap.Toast($toastDiv[0], options) // Returns a Bootstrap toast instance
+    theToast.show();
+    $toastDiv[0].addEventListener("hidden.bs.toast", function (){
+        theToast.dispose();
+        $toastDiv.remove();
+    });
+}
+
+function showDebug() {
+    showToast('Debug Menu', "<button class='btn btn-sm btn-danger' onclick='audioContext.close();_masterGain=undefined;audioContext=new AudioContext();'>Stop all audio</button>" +
+        "&nbsp; <button class='btn btn-sm btn-danger' onclick='showAdmin(prompt())'>Admin</button>");
+}

@@ -227,6 +227,9 @@ socket.addEventListener('message', function (event) {
             case 'join_game':
                 $("#addStuffButton").hide();
 
+                if (data['mute_players'] && !data.host)
+                    $("#btn_wifi_toggle[value='wifi']").click();
+
                 // playNote(161.6, 'sine')
                 document.getElementById('nav_room_code').value = data.words;
                 currentGame = data;
@@ -569,6 +572,7 @@ $("#start_new_game_button").on('click', function () {
         'mc_chance_artist': $("#newGameSettingsMCArtistOnlyChance").val(),
         'mc_chance_title': $("#newGameSettingsMCTitleOnlyChance").val(),
         'presentation_mode': $('#new_game_presentation_mode_on').is(':checked'),
+        'mute_players': $('#new_game_mute_mode_on').is(':checked'),
     }));
 });
 

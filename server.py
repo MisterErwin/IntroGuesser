@@ -240,6 +240,7 @@ async def send_join_game(websocket, g, host=False):
          'host': host,
          'points': {u.uuid: u.points for u in g['players'] if not u.presenter},
          'players': {u.uuid: u.name for u in g['players'] if not u.presenter},
+         'mute_players': g['mute_players'],
          }))
 
 
@@ -266,8 +267,9 @@ async def msg(str_msg, websocket):
             'input_mode': 'mc' if data['input_mode'] == 'mc' else 'input',
             'song_tags': data['song_tags'],
             'presentation_mode': data['presentation_mode'],
+            'mute_players': data['mute_players'],
+
         }
-        print(data['presentation_mode'])
         websocket.presenter = data['presentation_mode'] == True
         GAMES[words] = game
         websocket.game = game

@@ -42,7 +42,8 @@ lastfm_network = pylast.LastFMNetwork(
 async def handle(websocket, path):
     if path != '/version/1.2.1':
         await websocket.send(json.dumps({'action': 'showerror',
-                                         'msg': 'The client and server version are not compatible! Please reload your page...'}))
+                                         'msg': 'The client and server version are not compatible! Please reload your page...',
+                                         'version': path}))
         await asyncio.sleep(10)
         await websocket.close()
         return
@@ -309,9 +310,11 @@ async def msg(str_msg, websocket):
         if not websocket.game:
             await websocket.send(json.dumps({'action': 'showerror', 'msg': 'No room found'}))
             return
-        data['guess']['time'] = time.time()
+        if 'time' not in data['guess']:
+            data['guess']['time'] = time.time()
         websocket.guess = data['guess']
         if "announce" in websocket.guess:
+            data['guess']['time'] = time.time()
             await broadcast_to_game(websocket.game, {
                 'action': 'player_guessed',
                 'name': websocket.name,

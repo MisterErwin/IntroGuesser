@@ -618,8 +618,8 @@ def get_fixed_choices(g, question):
             sqlite_cur.execute(f'SELECT distinct title FROM songs WHERE yt_id != ? AND title != ? AND artist = ? ORDER BY RANDOM() LIMIT 3', [question['yt_id'], question['title'], question['artist']])
             for row in sqlite_cur.fetchall():
                 fixed_choices.append({'artist': question['artist'], 'title': row['title']})
-            if len(fixed_choices) == 4:
-                return fixed_choices
+                if len(fixed_choices) == 4:
+                    return fixed_choices
 
         sqlite_cur.execute(f'SELECT songs.* FROM songs WHERE yt_id != ? AND title != ? ORDER BY RANDOM() LIMIT 3', [question['yt_id'], question['title']])
     else:
@@ -630,6 +630,8 @@ def get_fixed_choices(g, question):
             params + [question['yt_id'], question['title']])
     for row in sqlite_cur.fetchall():
         fixed_choices.append({'artist': row['artist'], 'title': row['title']})
+        if len(fixed_choices) == 4:
+            break
     return fixed_choices
 
 

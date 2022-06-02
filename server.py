@@ -1,6 +1,7 @@
 import asyncio
 import html
 import os
+import string
 import traceback
 
 import websockets
@@ -9,7 +10,7 @@ import json
 import uuid
 
 import re
-from random_word import RandomWords
+# from random_word import RandomWords
 from Levenshtein import distance as levenshtein_distance
 import time
 import sqlite3
@@ -31,13 +32,15 @@ sqlite_con.row_factory = sqlite3.Row
 sqlite_cur = sqlite_con.cursor()
 
 GAMES = {}
-rrr = RandomWords()
+# rrr = RandomWords()
 
 lastfm_network = pylast.LastFMNetwork(
     api_key=os.getenv('LAST_API_KEY'),
     api_secret=os.getenv('LAST_API_SECRET'),
 )
 
+# Env option to disable the addition of new tracks
+disable_adding = 'DISABLE_ADDING' in os.environ
 
 async def handle(websocket, path):
     if path != '/version/1.2.1':
@@ -47,7 +50,8 @@ async def handle(websocket, path):
         await asyncio.sleep(10)
         await websocket.close()
         return
-    websocket.name = ' '.join(rrr.get_random_words(limit=2, maxLength=10))
+    # websocket.name = ' '.join(rrr.get_random_words(limit=2, maxLength=10))
+    websocket.name = 'Your name here'
     websocket.uuid = str(uuid.uuid4())
     websocket.game = None
     websocket.guess = None
@@ -251,7 +255,8 @@ async def msg(str_msg, websocket):
     if data['command'] == 'start_game':
         if 'name' in data and len(data['name']):
             websocket.name = html.escape(data['name'])
-        words = ' '.join(rrr.get_random_words(limit=5, maxLength=10))
+        # words = ' '.join(rrr.get_random_words(limit=5, maxLength=10))
+        words = ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
         game = {
             'host': websocket,
             'words': words,
@@ -447,6 +452,8 @@ async def msg(str_msg, websocket):
             json.dumps(
                 {'action': 'reply_fetch_tags', 'tags': tags}))
     elif data['command'] == 'init_download':
+        if disable_adding:
+            return await adding_disabled_message(websocket)
         yt = find_yt_urls(data['id'])
         await websocket.send(json.dumps({'action': 'show_progress', 'msg': 'Downloading song information'}))
         if not yt:
@@ -482,6 +489,8 @@ async def msg(str_msg, websocket):
         fetch_last_fm(data, lastfm_track, 'loading')
         await websocket.send(json.dumps(data))
     elif data['command'] == 'init_add':
+        if disable_adding:
+            return await adding_disabled_message(websocket)
         print(data)
         song_uuid = re.sub(r'[^a-zA-Z0-9\-]+', '', data['uuid'])
         sqlite_cur.execute('SELECT 1 FROM songs WHERE uuid=?', (song_uuid,))
@@ -558,6 +567,8 @@ async def msg(str_msg, websocket):
 
         await websocket.send(json.dumps({'action': 'show_stage', 'stage': 'song_init', 'yt_id_done': data['yt_id']}))
     elif data['command'] == 'find_song_suggestions':
+        if disable_adding:
+            return await adding_disabled_message(websocket)
         sqlite_cur.execute(f'SELECT title, artist FROM songs WHERE lastfm_url IS NOT NULL ORDER BY RANDOM() LIMIT 3')
         suggestions = []
         for row in sqlite_cur.fetchall():
@@ -602,6 +613,10 @@ async def msg(str_msg, websocket):
 
         await websocket.send(json.dumps({'msg': greeting}))
         print(f"> {greeting}")
+
+
+async def adding_disabled_message(websocket):
+    await websocket.send(json.dumps({'action': 'showerror', 'msg': 'Adding new songs is disabled for this instance'}))
 
 
 def get_cover_image(track):

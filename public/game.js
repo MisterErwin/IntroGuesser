@@ -50,6 +50,9 @@ socket.addEventListener('message', function (event) {
         $("#main-loading").hide();
         $("#main-screen").show();
         myUUID = data.uuid;
+        console.log(data, data.allow_adding);
+        if (!data.allow_adding)
+          $("#addStuffButton").hide();
     } else if (data.action === 'player_guessed') {
         $('[data-player-uuid=' + data.uuid + '] a').addClass("text-info");
         if (currentGame.host && !currentGame.voteTimeTimeout) {

@@ -60,7 +60,8 @@ async def handle(websocket, path):
     try:
         await websocket.send(json.dumps(
             {'action': 'welcome', 'uuid': websocket.uuid, 'name': websocket.name,
-             'ip': websocket.request_headers.get('X-Forwarded-For') or websocket.remote_address[0]})
+             'ip': websocket.request_headers.get('X-Forwarded-For') or websocket.remote_address[0],
+             'allow_adding': not disable_adding})
         )
         async for message in websocket:
             await msg(message, websocket)

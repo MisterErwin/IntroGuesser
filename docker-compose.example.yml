@@ -3,7 +3,7 @@ version: "3.3"
 services:
   # the python server being the backend
   intro-ws:
-    build: .
+    build: server
     volumes:
       - ./public:/usr/src/app/public
       - ./intro.db:/usr/src/app/intro.db
@@ -11,6 +11,7 @@ services:
       - ADMIN_PWD=changeMe
       - LAST_API_KEY=REPLACEME
       - LAST_API_SECRET=REPLACEME
+#      - DISABLE_ADDING
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.intro-back.rule=Host(`introguesserws.example.org`)"

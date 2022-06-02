@@ -1,0 +1,52 @@
+version: "3.3"
+
+# This docker-compose file starts the Introguesser game servers and an ap container, which
+# sets the WiFi device into AP mode, creates an open hotspot, starts DHCP,
+# and uses captive-portal tech (unbound + iptables) to redirect everything to the static service at http://intro.guesser
+
+services:
+ # the python server being the backend
+ intro-ws:
+  build: server
+  volumes:
+   - ./public:/usr/src/app/public
+   - ./intro.db:/usr/src/app/intro.db
+  environment:
+   - ADMIN_PWD=changeMe
+   - LAST_API_KEY=REPLACEME
+   - LAST_API_SECRET=REPLACEME
+   - DISABLE_ADDING # as we do not have internet,
+  networks:
+   introguesser:
+    ipv4_address: 192.168.244.12
+
+ # a static file server because I could not be **** to write it in python
+ static:
+  image: "halverneus/static-file-server"
+  container_name: "static-introguesser-fileserver"
+  environment:
+   PORT: 80
+  networks:
+   introguesser:
+    ipv4_address: 192.168.244.11
+  volumes:
+   - "./public/:/web:ro"
+
+ ap:
+  build: wifi
+  privileged: true
+  environment:
+   INTERFACE: wlp5s0
+   OUTGOINGS: eth0
+  networks:
+   introguesser:
+    ipv4_address: 192.168.244.2
+  volumes:
+   - /var/run/docker.sock:/var/run/docker.sock
+  security_opt:
+   - 'apparmor=unconfined'
+
+networks:
+ introguesser:
+  external: true
+# docker network create --subnet 192.168.244.0/24 introguesser

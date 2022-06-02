@@ -1,0 +1,31 @@
+version: '3.3'
+
+# Test docker-compose file for the hostapd etc setup
+
+services:
+ ap:
+  build: .
+  privileged: true
+  environment:
+   INTERFACE: wlp5s0
+   OUTGOINGS: eth0
+  networks:
+   introguesser:
+    ipv4_address: 192.168.244.2
+  volumes:
+   - /var/run/docker.sock:/var/run/docker.sock
+  security_opt:
+   - 'apparmor=unconfined'
+
+ hello_world:
+  image: "traefik/whoami"
+  networks:
+   introguesser:
+    ipv4_address: 192.168.244.11
+
+networks:
+ introguesser:
+  external: true
+
+
+# docker network create --subnet 192.168.244.0/24 introguesser

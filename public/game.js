@@ -3,7 +3,8 @@ const socket = new WebSocket(
     (
         (location.hostname === "localhost" || location.hostname === "127.0.0.1") ?
             'ws://localhost:8765' :
-            'wss://introguesserws.cloud.luepg.es')
+          (location.hostname === "intro.guesser" ?  'ws://introserv.guesser:8765' :
+            'wss://introguesserws.cloud.luepg.es'))
     + '/version/1.2.1'
 );
 

@@ -396,17 +396,22 @@ async def msg(str_msg, websocket):
         g['previous'].append(question['yt_id'])
         for p in websocket.game['players']: # clear guesses
             p.guess = None
-        fixed_choices = [] # multiple choices
+
+        reply = {'action': 'game_next',
+                 'path': f'songs/game/{question_uuid}.mp3',
+                 'result_yt_id': 'dQw4w9WgXcQ',
+                 'words': g['words']}
+        # Enrich reply
         if g['input_mode'] == 'mc':
-            fixed_choices = get_fixed_choices(g, question)
+            fixed_choices = get_fixed_choices(g, question) # multiple choices
             random.shuffle(fixed_choices)
-        await broadcast_to_game(g, {'action': 'game_next',
-                                    'path': f'songs/game/{question_uuid}.mp3',
-                                    'help_artist': show_help(question['artist'], g['help_percentage']),
-                                    'help_title': show_help(question['title'], g['help_percentage']),
-                                    'result_yt_id': 'dQw4w9WgXcQ',
-                                    'fixed_choices': fixed_choices,
-                                    'words': g['words']})
+            reply['fixed_choices'] = fixed_choices
+        else:
+            # Add help
+            reply['help_artist'] = show_help(question['artist'], g['help_percentage'])
+            reply['help_title'] = show_help(question['title'], g['help_percentage'])
+
+        await broadcast_to_game(g, reply)
     elif data['command'] == 'admin_list_songs':
         if data['password'] == os.getenv('ADMIN_PWD'):
             sqlite_cur.execute('''SELECT songs.*,song_tags.*, 

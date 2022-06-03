@@ -214,7 +214,7 @@ socket.addEventListener('message', function (event) {
           for (let choice of currentGame.fixed_choices) {
             // For every possible choice, create a card
             const correct = choice.title === data.title && choice.artist === data.artist;
-            let $card = $("<div/>", {class: 'card me-3 ' + (correct ? 'border-success' : ''), style: 'width: 18rem'})
+            let $card = $("<div/>", {class: 'card mx-2 mb-3 ' + (correct ? 'border-success' : ''), style: 'width: 18rem'})
               .appendTo(mcResultsRow);
             // Have the body with title and artist
             let $cbody = $("<div/>", {class: 'card-body'}).appendTo($card);
@@ -253,7 +253,6 @@ socket.addEventListener('message', function (event) {
             $tr.appendTo(tbody);
             if (showAsMC) {
               let $titleTD = $("<td/>", {text: currentGame.players[guess.uuid]});
-              console.log(guess.uuid in data.title_points);
               if (guess.uuid in data.title_points) {
                 let playerPoints = data.title_points[guess.uuid];
                 if (playerPoints)
@@ -300,6 +299,7 @@ socket.addEventListener('message', function (event) {
         document.getElementById('nav_room_code').value = data.words;
         currentGame = data;
         document.getElementById('gameSidebar').setAttribute('style', 'display:fixed !important');
+        $("#toggleSidebarBtn").show();
         if (data.state === 'WAITING') {
           $("#game-screen-waiting").show();
         } else if (data.state === 'playing') {

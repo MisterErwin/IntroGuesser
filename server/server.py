@@ -231,6 +231,7 @@ async def game_show_result(g):
         'title_points': title_points,
         'guesses': results,
         'points': {u.uuid: u.points for u in g['players'] if not u.presenter},
+        'display_mode': g['input_mode'],
         'words': g['words']})
     pass
 

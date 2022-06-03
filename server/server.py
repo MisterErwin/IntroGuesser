@@ -43,7 +43,7 @@ lastfm_network = pylast.LastFMNetwork(
 disable_adding = 'DISABLE_ADDING' in os.environ
 
 async def handle(websocket, path):
-    if path != '/version/1.2.1':
+    if path != '/version/1.2.2':
         await websocket.send(json.dumps({'action': 'showerror',
                                          'msg': 'The client and server version are not compatible! Please reload your page...',
                                          'version': path}))

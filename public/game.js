@@ -5,7 +5,7 @@ const socket = new WebSocket(
       'ws://localhost:8765' :
       (location.hostname === "intro.guesser" ? 'ws://introserv.guesser:8765' :
         'wss://introguesserws.cloud.luepg.es'))
-  + '/version/1.2.1'
+  + '/version/1.2.2'
 );
 
 socket.addEventListener('close', function (event) {
